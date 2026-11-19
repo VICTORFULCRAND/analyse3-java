@@ -14,6 +14,10 @@ un chapitre est un package, une notion est une classe, et les liens entre chapit
   - 18 exercices d'entraînement corrigés
 - `analyse3-fiche-a-imprimer.pdf` : la version papier, 7 pages A4.
 
+## Page d'entrée
+
+La fiche demande un prénom et un nom avant de s'afficher. Ils sont envoyés, avec la date de la visite, à l'auteur de la fiche.
+
 ## Avertissement
 
 Fiche de révision personnelle rédigée à partir du poly du cours. Le formulaire, les exceptions, le quiz et les
