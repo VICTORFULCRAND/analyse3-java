@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fabrique index.html (version GitHub) à partir de analyse3-java.html, avec la page d'entrée prénom/nom.
 Réglages du formulaire Google dans gate-config.json : {"url": "...formResponse", "prenom": "entry.123", "nom": "entry.456"}"""
-import json, os
+import json, os, base64
 here=os.path.dirname(os.path.abspath(__file__))
 s=open(os.path.join(here,'analyse3-java.html'),encoding='utf-8').read()
 cfg={"url":"","prenom":"","nom":""}
@@ -37,7 +37,7 @@ gate_html='''<div class="gate" id="gate" role="dialog" aria-modal="true" aria-la
 </div>'''
 gate_js='''<script>
 (function(){
-  var FORM=%s;
+  var FORM={}; try{ FORM=JSON.parse(atob('%s'.split('').reverse().join(''))); }catch(e){ FORM={url:''}; }
   var gate=document.getElementById('gate'), form=document.getElementById('gateForm'), err=document.getElementById('gateErr');
   var who=null; try{ who=JSON.parse(localStorage.getItem('a3who')||'null'); }catch(e){}
   function log(w){
@@ -58,7 +58,7 @@ gate_js='''<script>
     open(w);
   });
 })();
-</script>''' % json.dumps(cfg)
+</script>''' % base64.b64encode(json.dumps(cfg).encode()).decode()[::-1]
 head='<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
 i=s.index('<nav class="pk"')
 doc=head+s[:i]+gate_css+'\n</head>\n<body style="margin:0">\n'+gate_html+'\n'+s[i:]+'\n'+gate_js+'\n</body>\n</html>\n'
