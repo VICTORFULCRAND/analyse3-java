@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analyse 3 en Java</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout : une page = un projet Java. Chaque chapitre est un package, chaque notion une boîte UML
+   à trois compartiments (en-tête, attributs, méthodes), les liens entre chapitres sont des imports. */
+:root{
+  --bg:#f5f6f9; --surface:#ffffff; --ink:#1a2130; --muted:#5a6577; --line:#cfd5df; --soft:#e9ecf2;
+  --p1:#2a68ad; --p2:#0c8071; --p3:#a35a12; --p4:#7149b3; --p5:#b5305f; --p6:#47741b;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#13161c; --surface:#1b2028; --ink:#e5e8ee; --muted:#9aa5b6; --line:#343c4a; --soft:#242a34;
+  --p1:#6fabeb; --p2:#45c4b2; --p3:#e2a460; --p4:#b39aec; --p5:#f085aa; --p6:#a0c96f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#13161c; --surface:#1b2028; --ink:#e5e8ee; --muted:#9aa5b6; --line:#343c4a; --soft:#242a34;
+  --p1:#6fabeb; --p2:#45c4b2; --p3:#e2a460; --p4:#b39aec; --p5:#f085aa; --p6:#a0c96f; color-scheme:dark }
+
+[data-p="1"]{--p:var(--p1)} [data-p="2"]{--p:var(--p2)} [data-p="3"]{--p:var(--p3)}
+[data-p="4"]{--p:var(--p4)} [data-p="5"]{--p:var(--p5)} [data-p="6"]{--p:var(--p6)}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+code,.mono{font-family:var(--mono);font-size:.88em}
+a{color:inherit}
+a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+p{margin:0}
+
+/* barre des packages */
+nav.pk{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line)}
+nav.pk .wrap{display:flex;gap:.4rem;overflow-x:auto;padding-block:.55rem}
+nav.pk a{flex:none;font-family:var(--mono);font-size:.8rem;text-decoration:none;padding:.3rem .6rem;border:1px solid var(--line);background:var(--surface);color:var(--p,var(--ink));font-weight:600}
+nav.pk a:hover{border-color:var(--p,var(--ink))}
+
+/* en-tête */
+.top{padding-block:2.2rem 1.4rem;display:grid;gap:1rem}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.6rem,4.2vw,2.5rem);letter-spacing:-.02em;line-height:1.15}
+.top h1 span{color:var(--muted);font-weight:400}
+.top p.lede{max-width:65ch;color:var(--muted)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.6rem 1.4rem;max-width:62rem;font-size:.92rem}
+.legend div{border-top:1px solid var(--line);padding-top:.5rem}
+.legend b{font-family:var(--mono);font-size:.85rem;display:block}
+
+section.blk{padding-block:1.6rem}
+h2.sec{font-family:var(--mono);font-size:1.05rem;font-weight:700;margin-bottom:.3rem}
+p.sub{color:var(--muted);max-width:68ch;margin-bottom:1rem}
+
+/* diagramme */
+.diag{overflow-x:auto;border:1px solid var(--line);background:var(--surface)}
+.diag svg{display:block;min-width:820px;width:100%;height:auto}
+.diag .node rect{fill:var(--surface);stroke:var(--p);stroke-width:1.5}
+.diag .node .tab{fill:var(--p)}
+.diag .node text{font-family:var(--mono);fill:var(--ink)}
+.diag .node .n1{font-size:11px;fill:var(--p);font-weight:700}
+.diag .node .n2{font-size:15px;font-weight:700}
+.diag .node .n3{font-size:11px;fill:var(--muted)}
+.diag .node:hover rect{stroke-width:2.5}
+.diag .edge{fill:none;stroke:var(--muted);stroke-width:1.2}
+.diag .th{stroke:var(--ink);stroke-width:2.4}
+.diag marker path{fill:var(--muted)}
+.diag .lbl text{font-family:var(--mono);font-size:12px;fill:var(--ink)}
+.diag .lbl rect{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.diag .lbl.t rect{stroke:var(--ink);stroke-width:1.5}
+.diag .lbl.t text{font-weight:700}
+.diag marker path.mt{fill:var(--ink)}
+
+/* table des liens */
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,21rem),1fr));gap:.8rem}
+.lk{border:1px solid var(--line);background:var(--surface);padding:.7rem .85rem;display:grid;gap:.35rem;min-width:0}
+.lk .ft{font-family:var(--mono);font-size:.78rem;font-weight:700;display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+.lk .ft a{text-decoration:none;color:var(--p)}
+.lk .ft a:hover{text-decoration:underline}
+.lk .ft i{font-style:normal;color:var(--muted)}
+.lk h3{font-size:.98rem;font-weight:600}
+.lk p{font-size:.92rem;color:var(--muted)}
+
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{border:1px solid var(--line);padding:.45rem .6rem;text-align:left;vertical-align:top}
+th{font-family:var(--mono);font-size:.76rem;letter-spacing:.03em;background:var(--soft);font-weight:700}
+.tw{overflow-x:auto}
+
+/* packages */
+.pkg{padding-block:2rem 1rem;border-top:2px solid var(--p);scroll-margin-top:8rem}
+.pkg>header{display:grid;gap:.35rem;margin-bottom:1.1rem}
+.pkg>header h2{font-family:var(--mono);font-size:clamp(1.15rem,2.6vw,1.5rem);font-weight:700}
+.pkg>header h2 small{color:var(--p);font-size:.8rem;font-weight:700;display:block;letter-spacing:.04em}
+.src{font-family:var(--mono);font-size:.8rem;color:var(--muted);line-height:1.7;overflow-x:auto;white-space:nowrap}
+.src b{color:var(--ink);font-weight:600}
+.src a{color:var(--p);text-decoration:none;font-weight:600}
+.src a:hover{text-decoration:underline}
+.classes{columns:2 25rem;column-gap:1.1rem}
+
+/* boîte UML */
+.cls{break-inside:avoid;border:1.5px solid var(--p);background:var(--surface);margin-bottom:1.1rem;scroll-margin-top:8.2rem;min-width:0}
+.cls>header{padding:.55rem .8rem;background:color-mix(in srgb,var(--p) 13%,var(--surface));border-bottom:1.5px solid var(--p);font-family:var(--mono)}
+.cls>header .st{font-size:.72rem;color:var(--muted);display:block}
+.cls>header .nm{font-size:1.02rem;font-weight:700}
+.cls>header .ex{font-size:.78rem;color:var(--muted)}
+.cls>header .ex a{color:var(--p);text-decoration:none;font-weight:600}
+.cmp{padding:.65rem .8rem;border-bottom:1px solid var(--line)}
+.cmp:last-child{border-bottom:0}
+.cmp>h4{margin:0 0 .4rem;font-family:var(--mono);font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+dl{margin:0;display:grid;gap:.55rem}
+dt{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--p)}
+dd{margin:.1rem 0 0;font-size:.93rem}
+.m{margin-top:.7rem}
+.m:first-of-type{margin-top:0}
+.sig{font-family:var(--mono);font-size:.82rem;font-weight:600;background:var(--soft);padding:.25rem .45rem;overflow-x:auto;white-space:nowrap}
+.sig i{font-style:normal;color:var(--muted);font-weight:400}
+.m ol,.m ul{margin:.4rem 0 0;padding-left:1.25rem;font-size:.93rem;display:grid;gap:.25rem}
+.m p{font-size:.93rem;margin-top:.4rem}
+.ex-box{margin-top:.45rem;font-size:.9rem;border-left:2px solid var(--line);padding-left:.6rem;color:var(--muted)}
+.ex-box b{color:var(--ink);font-weight:600}
+.warn{font-size:.9rem;margin-top:.45rem}
+.warn b{font-family:var(--mono);font-size:.76rem;border:1px solid var(--ink);padding:0 .3rem;margin-right:.3rem}
+.rels{display:flex;flex-wrap:wrap;gap:.35rem}
+.rels a{font-family:var(--mono);font-size:.74rem;text-decoration:none;border:1px solid var(--p);color:var(--p);padding:.12rem .4rem;font-weight:600}
+.rels a:hover{background:color-mix(in srgb,var(--p) 14%,var(--surface))}
+mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden}
+mjx-container[display="true"]{margin:.45em 0 !important}
+footer.end{padding-block:1.5rem 3rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);margin-top:1rem}
+
+[data-p="0"]{--p:var(--ink)}
+nav.pk button{flex:none;font-family:var(--mono);font-size:.8rem;font-weight:700;padding:.3rem .6rem;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+nav.pk button[aria-pressed="false"]{background:var(--surface);color:var(--ink)}
+nav.pk button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.fm dl>div{display:grid;grid-template-columns:minmax(6.2rem,auto) 1fr;gap:.7rem;align-items:center}
+.fm dl>div dt{color:var(--ink);font-weight:400}
+.fm dd{margin:0}
+.xc p{color:var(--ink)}
+.xc p b{font-family:var(--mono);font-size:.74rem;color:var(--p);margin-right:.35rem}
+.xc p+p b{color:var(--muted)}
+/* mode quiz : les réponses sont masquées jusqu'au clic */
+.quizon .q:not(.shown){position:relative;cursor:pointer;background:var(--soft);outline:1px dashed var(--muted);outline-offset:1px;color:transparent;min-height:1.7rem;user-select:none;-webkit-user-select:none}
+.quizon .q:not(.shown) *{color:transparent!important;border-color:transparent!important;background:transparent!important;pointer-events:none}
+.quizon .q:not(.shown)::after{content:"afficher";position:absolute;inset:0;display:grid;place-items:center;font:600 .68rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.quizon .q:focus-visible{outline:2px solid var(--ink)}
+.quizon .q.shown{cursor:pointer}
+
+/* ---- harmonisation : mêmes en-têtes, mêmes espacements, une couleur = un chapitre ---- */
+nav.pk .sep{flex:none;width:1px;background:var(--line);margin:0 .35rem}
+section.blk{padding-block:1.6rem 1rem;margin-top:2.6rem;border-top:2px solid var(--ink)}
+section.blk+section.blk{margin-top:1.4rem;border-top:1px solid var(--line)}
+h2.sec{font-size:clamp(1.15rem,2.6vw,1.5rem);margin-bottom:.5rem}
+p.sub{margin-bottom:1.3rem}
+.pkg{margin-top:3rem;padding-block:0 1rem}
+.pkg>header{background:color-mix(in srgb,var(--p) 9%,var(--bg));padding:1.1rem 1.2rem;margin-bottom:1.5rem;gap:.55rem}
+.classes{column-gap:1.5rem}
+.cls{margin-bottom:1.5rem}
+.cls>header{padding:.7rem .95rem}
+.cmp{padding:.9rem .95rem}
+.cmp>h4{margin-bottom:.65rem}
+.cls dl{gap:.8rem}
+.cls dl>div+div{border-top:1px dotted var(--line);padding-top:.8rem}
+.fm dl{gap:.5rem}
+.fm dl>div+div{padding-top:.5rem}
+.m{margin-top:0}
+.m+.m{margin-top:1.1rem;padding-top:1rem;border-top:1px dotted var(--line)}
+.m ol,.m ul{margin-top:.6rem;gap:.4rem}
+.m p{margin-top:.6rem}
+.ex-box{margin-top:.7rem;padding:.1rem 0 .1rem .7rem;border-left:2px solid var(--p)}
+.warn{margin-top:.7rem}
+.rels{gap:.45rem}
+.grp+.grp{margin-top:1.8rem}
+.gh{font-family:var(--mono);font-size:.84rem;font-weight:700;color:var(--p);display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem}
+.gh::after{content:"";flex:1;height:1px;background:color-mix(in srgb,var(--p) 45%,var(--line))}
+.links{gap:1rem}
+.grp .lk{border-top:2px solid var(--p);padding:.85rem 1rem;gap:.5rem}
+tr[data-p] td:first-child{box-shadow:inset 3px 0 var(--p)}
+tr[data-p] td:first-child code{color:var(--p);font-weight:700}
+tr[data-p] td a{color:var(--p);font-weight:600;text-decoration:none}
+tr[data-p] td a:hover{text-decoration:underline}
+tr.g1 td{border-top:2px solid var(--p)}
+th,td{padding:.55rem .7rem}
+
+/* ---- recherche, quiz par chapitre, schémas ---- */
+:root{--ok:#2c7a4b;--ko:#b23c2a}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--ok:#74cf98;--ko:#f18d7c} }
+:root[data-theme="dark"]{--ok:#74cf98;--ko:#f18d7c}
+[hidden]{display:none!important}
+nav.pk .tools{overflow:visible;flex-wrap:wrap;align-items:center;padding-block:0 .55rem;gap:.45rem}
+nav.pk .srch{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+nav.pk input[type=search],nav.pk select{font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-width:0}
+nav.pk input[type=search]{flex:1 1 12rem;max-width:22rem}
+nav.pk input:focus-visible,nav.pk select:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+nav.pk .cnt{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.score{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:.35rem}
+.score .sc{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);background:var(--surface);padding:.15rem .45rem;color:var(--ink)}
+.score .sc b{color:var(--p)}
+.score .sc .k{color:var(--ko)} .score .sc .o{color:var(--ok)}
+.nores{font-family:var(--mono);padding-block:2rem;color:var(--muted)}
+@media (max-width:700px){ nav.pk{position:static} }
+.quizon .q{padding-left:.55rem}
+.q[data-r="ok"]{box-shadow:inset 3px 0 var(--ok)}
+.q[data-r="ko"]{box-shadow:inset 3px 0 var(--ko)}
+.rate{display:flex;gap:.4rem;margin-top:.5rem}
+.rate button{font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.2rem .5rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.rate button[data-v="ok"]{border-color:var(--ok);color:var(--ok)}
+.rate button[data-v="ko"]{border-color:var(--ko);color:var(--ko)}
+.rate button:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));gap:.8rem}
+.fg{margin:0;border:1px solid var(--line);padding:.5rem .5rem .4rem;display:grid;gap:.3rem;min-width:0}
+.fg svg{display:block;width:100%;height:auto;max-width:15rem;margin:0 auto}
+.fg figcaption{font-family:var(--mono);font-size:.74rem;text-align:center;color:var(--muted)}
+.fg text{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+.fg .ax{fill:none;stroke:var(--muted);stroke-width:1}
+.fg .sh{fill:color-mix(in srgb,var(--p) 9%,transparent);stroke:var(--p);stroke-width:1.7;stroke-linejoin:round}
+.fg .dsh{fill:none;stroke:var(--p);stroke-width:1.1;stroke-dasharray:4 3}
+.fg .an{fill:none;stroke:var(--ink);stroke-width:1.1}
+.fg .pt{fill:var(--p);stroke:none} .fg .pt2{fill:var(--surface);stroke:var(--p);stroke-width:1.2}
+
+/* ---- entraînement ---- */
+.tr .tn{color:var(--p)}
+.tr p.en{color:var(--ink);font-size:.95rem}
+.tr details{border-top:1px dotted var(--line);padding-top:.55rem;margin-top:.2rem}
+.tr summary{font-family:var(--mono);font-size:.76rem;font-weight:700;cursor:pointer;color:var(--p)}
+.tr summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.tr details p.mt{margin-top:.6rem;font-size:.86rem}
+.tr details p.mt a{color:var(--p);font-family:var(--mono);font-size:.8rem;font-weight:600;text-decoration:none}
+.tr details ol{margin:.5rem 0 0;padding-left:1.25rem;display:grid;gap:.4rem;font-size:.92rem;color:var(--ink)}
+.tr details p.rs{margin-top:.6rem;color:var(--ink);font-size:.95rem}
+.tr details p.rs b{font-family:var(--mono);font-size:.74rem;color:var(--p);margin-right:.35rem}
+
+/* ---- quiz QCM ---- */
+.off{position:absolute!important;left:-9999px;top:0;visibility:hidden;pointer-events:none}
+.qtabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.1rem}
+.qtab{font-family:var(--mono);font-size:.8rem;padding:.45rem .7rem;border:1.5px solid var(--p,var(--ink));background:var(--surface);color:var(--p,var(--ink));cursor:pointer;display:grid;gap:.1rem;text-align:left}
+.qtab .best{font-size:.7rem;color:var(--muted);min-height:1em}
+.qtab[aria-pressed="true"]{background:color-mix(in srgb,var(--p,var(--ink)) 16%,var(--surface))}
+.qtab:focus-visible,.opt:focus-visible,.qbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.qstage{position:relative;border:1.5px solid var(--ink);background:var(--surface);padding:1.1rem 1.2rem;max-width:46rem;display:grid;gap:.9rem;overflow:hidden}
+.qhint{color:var(--muted)}
+.qhead{display:flex;justify-content:space-between;gap:1rem;font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.qq{display:grid;gap:.8rem;min-width:0}
+.qq .qt{font-size:1.05rem;font-weight:500;padding-left:.7rem;border-left:3px solid var(--p)}
+.qo{display:grid;gap:.5rem}
+.opt{font:inherit;text-align:left;padding:.6rem .8rem;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;min-width:0}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt:disabled{cursor:default;opacity:1}
+.opt.good{border-color:var(--ok);box-shadow:inset 4px 0 var(--ok);font-weight:600}
+.opt.bad{border-color:var(--ko);box-shadow:inset 4px 0 var(--ko)}
+.qe{font-size:.93rem;color:var(--ink)}
+.qe .vd{font-family:var(--mono);font-size:.78rem;margin-right:.3rem}
+.qe.ok .vd{color:var(--ok)} .qe.ko .vd{color:var(--ko)}
+.qe a{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--p);text-decoration:none;white-space:nowrap}
+.qbtn{justify-self:start;font-family:var(--mono);font-size:.8rem;font-weight:700;padding:.45rem .8rem;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.qend{display:grid;gap:.8rem}
+.qres{font-family:var(--mono);font-size:1.3rem;font-weight:700}
+#qmiss p{font-size:.92rem;margin-bottom:.3rem}
+#qmiss a{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--ink);margin-right:.6rem}
+</style>
+
+<script>
+window.MathJax={tex:{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']],
+ macros:{R:'\\mathbb{R}',grad:'\\overrightarrow{\\mathrm{grad}}\\,',rot:'\\overrightarrow{\\mathrm{rot}}\\,',Div:'\\mathrm{div}\\,',
+ dd:'\\mathrm{d}',pd:['\\dfrac{\\partial #1}{\\partial #2}',2],v:['\\vec{#1}',1]}},svg:{fontCache:'global'}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+
+</head>
+<body style="margin:0">
+<nav class="pk" aria-label="Packages"><div class="wrap">
+  <a href="#liens">liens</a><span class="sep"></span>
+  <a href="#pkg1" data-p="1">ch1.fonctions</a>
+  <a href="#pkg2" data-p="2">ch2.vectorielle</a>
+  <a href="#pkg3" data-p="3">ch3.geometrie</a>
+  <a href="#pkg4" data-p="4">ch4.integrales</a>
+  <a href="#pkg5" data-p="5">ch5.curvilignes</a>
+  <a href="#pkg6" data-p="6">ch6.surfaces</a>
+  <span class="sep"></span><a href="#formulaire">util.formulaire</a>
+  <a href="#exceptions">exceptions</a>
+  <a href="#quiz">quiz</a>
+  <a href="#entrainement">entrainement</a>
+  <a href="#choix">quelleMethode()</a>
+</div>
+<div class="wrap tools">
+  <label class="srch" for="search">rechercher</label>
+  <input id="search" type="search" placeholder="jacobien, rot, stokes, cos…" autocomplete="off">
+  <span id="searchCount" class="cnt" aria-live="polite"></span>
+  <span class="sep"></span>
+  <button type="button" id="quizBtn" aria-pressed="false">masquer les réponses</button>
+  <label class="srch" for="quizScope">sur</label>
+  <select id="quizScope">
+    <option value="all">tout</option><option value="pkg1">ch1.fonctions</option><option value="pkg2">ch2.vectorielle</option><option value="pkg3">ch3.geometrie</option>
+    <option value="pkg4">ch4.integrales</option><option value="pkg5">ch5.curvilignes</option><option value="pkg6">ch6.surfaces</option><option value="formulaire">util.formulaire</option>
+  </select>
+  <button type="button" id="quizReset" aria-pressed="false" hidden>score à zéro</button>
+  <div id="score" class="score" hidden></div>
+</div></nav>
+
+<div class="wrap">
+<p id="noResult" class="nores" hidden>Aucune classe ne correspond à cette recherche.</p>
+
+<div class="top">
+  <h1>analyse3<span>.</span>*<span>;</span></h1>
+  <p class="lede">Les chapitres 1 à 6 du cours d'Analyse 3 (ECE ING2), rangés comme un projet Java. Un chapitre est un package, une notion est une classe, et ce qui relie deux chapitres est un import : la formule qui fait passer de l'un à l'autre.</p>
+  <div class="legend">
+    <div><b>Attributs</b>Ce qu'il faut connaître par cœur : définitions et formules.</div>
+    <div><b>Méthodes</b>Ce qu'il faut savoir faire : la technique, étape par étape.</div>
+    <div><b>extends / import</b>D'où vient la notion et où elle resservira. Chaque étiquette est cliquable.</div>
+  </div>
+</div>
+
+<!-- ============ LIENS ============ -->
+<section class="blk" id="liens" style="scroll-margin-top:8rem">
+  <h2 class="sec">Diagramme de packages</h2>
+  <p class="sub">Une flèche A → B se lit « B utilise A ». Le triangle épais relie les trois familles d'intégrales : chaque côté est un théorème qui transforme l'une en l'autre. Au centre, la géométrie fournit le paramétrage aux trois. En bas, l'analyse vectorielle fournit rot et div.</p>
+  <div class="diag">
+  <svg viewBox="0 0 980 620" role="img" aria-label="Dépendances entre les six chapitres">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker>
+    <marker id="ahT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mt" d="M0 0L10 5L0 10z"/></marker></defs>
+    <path class="edge" marker-end="url(#ah)" d="M220 130 L460 75"/>
+    <path class="edge" marker-end="url(#ah)" d="M110 186 C 50 400 200 585 460 572"/>
+    <path class="edge" marker-end="url(#ah)" d="M560 212 L560 108"/>
+    <path class="edge" marker-end="url(#ah)" d="M645 288 L770 362"/>
+    <path class="edge" marker-end="url(#ah)" d="M475 288 L350 362"/>
+    <path class="edge" marker-end="url(#ah)" d="M660 545 L850 438"/>
+    <path class="edge" marker-end="url(#ah)" d="M460 545 L270 438"/>
+    <path class="edge th" marker-end="url(#ahT)" d="M650 108 L830 362"/>
+    <path class="edge th" marker-end="url(#ahT)" d="M470 108 L290 362"/>
+    <path class="edge th" marker-end="url(#ahT)" d="M750 400 L370 400"/>
+    <g class="lbl" transform="translate(340 102)"><rect x="-68.0" y="-12" width="136" height="24"/><text text-anchor="middle" dominant-baseline="central">Jacobien |det J|</text></g>
+    <g class="lbl" transform="translate(103 338)"><rect x="-43.0" y="-12" width="86" height="24"/><text text-anchor="middle" dominant-baseline="central">∂f/∂x → ∇</text></g>
+    <g class="lbl" transform="translate(560 160)"><rect x="-85.0" y="-12" width="170" height="24"/><text text-anchor="middle" dominant-baseline="central">coordonnées, Jacobien</text></g>
+    <g class="lbl" transform="translate(707 325)"><rect x="-24.0" y="-12" width="48" height="24"/><text text-anchor="middle" dominant-baseline="central">γ(t)</text></g>
+    <g class="lbl" transform="translate(413 325)"><rect x="-31.0" y="-12" width="62" height="24"/><text text-anchor="middle" dominant-baseline="central">Ψ(u,v)</text></g>
+    <g class="lbl" transform="translate(755 491)"><rect x="-82.0" y="-12" width="164" height="24"/><text text-anchor="middle" dominant-baseline="central">rot F = 0 ⇔ ω exacte</text></g>
+    <g class="lbl" transform="translate(365 491)"><rect x="-52.0" y="-12" width="104" height="24"/><text text-anchor="middle" dominant-baseline="central">rot F, div F</text></g>
+    <g class="lbl t" transform="translate(749 248)"><rect x="-57.0" y="-12" width="114" height="24"/><text text-anchor="middle" dominant-baseline="central">Green-Riemann</text></g>
+    <g class="lbl t" transform="translate(371 248)"><rect x="-75.0" y="-12" width="150" height="24"/><text text-anchor="middle" dominant-baseline="central">Green-Ostrogradsky</text></g>
+    <g class="lbl t" transform="translate(560 400)"><rect x="-32.0" y="-12" width="64" height="24"/><text text-anchor="middle" dominant-baseline="central">Stokes</text></g>
+    <a href="#pkg1"><g class="node" data-p="1"><rect x="20" y="110" width="200" height="76"/><rect class="tab" x="20" y="110" width="200" height="6"/><text class="n1" x="34" y="136">ch1</text><text class="n2" x="34" y="156">fonctions</text><text class="n3" x="34" y="174">limites, ∂f/∂x, Jacobienne</text></g></a>
+    <a href="#pkg4"><g class="node" data-p="4"><rect x="460" y="32" width="200" height="76"/><rect class="tab" x="460" y="32" width="200" height="6"/><text class="n1" x="474" y="58">ch4</text><text class="n2" x="474" y="78">integrales</text><text class="n3" x="474" y="96">doubles, triples</text></g></a>
+    <a href="#pkg3"><g class="node" data-p="3"><rect x="460" y="212" width="200" height="76"/><rect class="tab" x="460" y="212" width="200" height="6"/><text class="n1" x="474" y="238">ch3</text><text class="n2" x="474" y="258">geometrie</text><text class="n3" x="474" y="276">vecteurs, paramétrages</text></g></a>
+    <a href="#pkg6"><g class="node" data-p="6"><rect x="170" y="362" width="200" height="76"/><rect class="tab" x="170" y="362" width="200" height="6"/><text class="n1" x="184" y="388">ch6</text><text class="n2" x="184" y="408">surfaces</text><text class="n3" x="184" y="426">flux à travers S</text></g></a>
+    <a href="#pkg5"><g class="node" data-p="5"><rect x="750" y="362" width="200" height="76"/><rect class="tab" x="750" y="362" width="200" height="6"/><text class="n1" x="764" y="388">ch5</text><text class="n2" x="764" y="408">curvilignes</text><text class="n3" x="764" y="426">circulation le long de C</text></g></a>
+    <a href="#pkg2"><g class="node" data-p="2"><rect x="460" y="522" width="200" height="76"/><rect class="tab" x="460" y="522" width="200" height="6"/><text class="n1" x="474" y="548">ch2</text><text class="n2" x="474" y="568">vectorielle</text><text class="n3" x="474" y="586">grad, div, rot, potentiel</text></g></a>
+  </svg>
+  </div>
+  <p class="sub" style="margin:.7rem 0 0">Deux liens secondaires ne sont pas dessinés pour garder le schéma lisible : ch3 fournit aussi les polaires à ch1 (calcul de limites) et les produits scalaire et vectoriel à ch2 (div et rot).</p>
+</section>
+
+<section class="blk">
+  <h2 class="sec">Les liens, formule par formule</h2>
+  <p class="sub">Chaque carte est un import : la classe de départ, la classe d'arrivée et la formule qui passe de l'une à l'autre.</p>
+  <div class="grp" data-p="1"><h3 class="gh">ch1.fonctions importe</h3><div class="links">
+    <div class="lk"><div class="ft"><a data-p="3" href="#Coordonnees">ch3.Coordonnees</a><i>→</i><a data-p="1" href="#Limite">ch1.Limite</a></div>
+      <h3>Les polaires prouvent une limite en (0,0)</h3>
+      \[\lim_{(x,y)\to(0,0)}f(x,y)=\lim_{r\to0}f(r\cos\theta,r\sin\theta)\]</div>
+  </div></div>
+  <div class="grp" data-p="2"><h3 class="gh">ch2.vectorielle importe</h3><div class="links">
+    <div class="lk"><div class="ft"><a data-p="1" href="#DeriveePartielle">ch1.DeriveePartielle</a><i>→</i><a data-p="2" href="#Nabla">ch2.Nabla</a></div>
+      <h3>Les opérateurs sont des dérivées partielles rangées</h3>
+      \[\v\nabla=\Big(\pd{}{x},\pd{}{y},\pd{}{z}\Big)\]
+      <p>Gradient, divergence, rotationnel et laplacien se calculent tous avec les règles du chapitre 1.</p></div>
+    <div class="lk"><div class="ft"><a data-p="1" href="#ClasseCk">ch1.ClasseCk</a><i>→</i><a data-p="2" href="#Proprietes">ch2.Proprietes</a></div>
+      <h3>Schwarz donne rot(grad f) = 0</h3>
+      \[\pd{^2f}{x\,\partial y}=\pd{^2f}{y\,\partial x}\ \Longrightarrow\ \rot(\grad f)=\v 0\]
+      <p>Chaque composante du rotationnel d'un gradient est une différence de dérivées croisées.</p></div>
+    <div class="lk"><div class="ft"><a data-p="3" href="#Vecteur3D">ch3.Vecteur3D</a><i>→</i><a data-p="2" href="#Nabla">ch2.Nabla</a></div>
+      <h3>div est un produit scalaire, rot un produit vectoriel</h3>
+      \[\Div\v F=\v\nabla\cdot\v F\qquad \rot\v F=\v\nabla\wedge\v F\]</div>
+  </div></div>
+  <div class="grp" data-p="4"><h3 class="gh">ch4.integrales importe</h3><div class="links">
+    <div class="lk"><div class="ft"><a data-p="1" href="#FonctionVectorielle">ch1.FonctionVectorielle</a><i>→</i><a data-p="4" href="#ChangementDeVariables">ch4.ChangementDeVariables</a></div>
+      <h3>Le Jacobien est le facteur d'échelle</h3>
+      \[\iint_D f(x,y)\,\dd x\,\dd y=\iint_\Delta f(T(u,v))\,|\det J_T(u,v)|\,\dd u\,\dd v\]</div>
+    <div class="lk"><div class="ft"><a data-p="3" href="#Coordonnees">ch3.Coordonnees</a><i>→</i><a data-p="4" href="#ChangementDeVariables">ch4.ChangementDeVariables</a></div>
+      <h3>Un paramétrage de solide donne les bornes et le Jacobien</h3>
+      \[\dd x\,\dd y=r\,\dd r\,\dd\theta\qquad \dd x\,\dd y\,\dd z=r\,\dd r\,\dd\theta\,\dd z=r^2\sin\varphi\,\dd r\,\dd\theta\,\dd\varphi\]</div>
+  </div></div>
+  <div class="grp" data-p="5"><h3 class="gh">ch5.curvilignes importe</h3><div class="links">
+    <div class="lk"><div class="ft"><a data-p="3" href="#CourbePlane">ch3.CourbePlane</a><i>→</i><a data-p="5" href="#IntegraleCurviligne">ch5.IntegraleCurviligne</a></div>
+      <h3>Le paramétrage γ ramène à une intégrale simple</h3>
+      \[\int_C \v F\cdot\dd\v l=\int_a^b \v F(\gamma(t))\cdot\gamma'(t)\,\dd t\]</div>
+    <div class="lk"><div class="ft"><a data-p="2" href="#ChampConservatif">ch2.ChampConservatif</a><i>→</i><a data-p="5" href="#FormeDifferentielle">ch5.FormeDifferentielle</a></div>
+      <h3>Champ conservatif et forme exacte, même objet</h3>
+      \[\v F=\grad f\iff \omega=P\,\dd x+Q\,\dd y+R\,\dd z\ \text{exacte}\ \Longrightarrow\ \int_{AB}\omega=f(B)-f(A)\]</div>
+    <div class="lk"><div class="ft"><a data-p="4" href="#IntegraleDouble">ch4.IntegraleDouble</a><i>→</i><a data-p="5" href="#GreenRiemann">ch5.GreenRiemann</a></div>
+      <h3>Green-Riemann : contour fermé vers intégrale double</h3>
+      \[\oint_C P\,\dd x+Q\,\dd y=\iint_\Delta\Big(\pd Qx-\pd Py\Big)\dd x\,\dd y\]</div>
+  </div></div>
+  <div class="grp" data-p="6"><h3 class="gh">ch6.surfaces importe</h3><div class="links">
+    <div class="lk"><div class="ft"><a data-p="3" href="#Vecteur3D">ch3.Vecteur3D</a><i>→</i><a data-p="6" href="#SurfaceParametree">ch6.SurfaceParametree</a></div>
+      <h3>Le produit vectoriel fabrique la normale</h3>
+      \[\v T_u\wedge\v T_v\ \perp\ S\qquad \iint_S\v F\cdot\dd\v S=\iint_D\v F(\Psi(u,v))\cdot(\v T_u\wedge\v T_v)\,\dd u\,\dd v\]</div>
+    <div class="lk"><div class="ft"><a data-p="5" href="#IntegraleCurviligne">ch5.IntegraleCurviligne</a><i>→</i><a data-p="6" href="#Stokes">ch6.Stokes</a></div>
+      <h3>Stokes : flux du rotationnel vers circulation sur le bord</h3>
+      \[\iint_S\rot\v F\cdot\dd\v S=\oint_C\v F\cdot\dd\v l\]</div>
+    <div class="lk"><div class="ft"><a data-p="4" href="#IntegraleTriple">ch4.IntegraleTriple</a><i>→</i><a data-p="6" href="#Ostrogradsky">ch6.GreenOstrogradsky</a></div>
+      <h3>Green-Ostrogradsky : flux sortant vers intégrale triple</h3>
+      \[\iint_S\v F\cdot\dd\v S=\iiint_\Omega\Div\v F\ \dd x\,\dd y\,\dd z\]</div>
+  </div></div>
+</section>
+
+<!-- ============ CH 1 ============ -->
+<section class="pkg" id="pkg1" data-p="1">
+  <header>
+    <h2><small>CHAPITRE 1</small>Fonctions de plusieurs variables</h2>
+    <div class="src"><b>package</b> analyse3.ch1.fonctions;<br><b>import</b> <a data-p="3" href="#Coordonnees">analyse3.ch3.geometrie.Coordonnees</a>; <span>// polaires, pour les limites</span></div>
+  </header>
+  <div class="classes">
+
+  <article class="cls" id="FonctionReelle">
+    <header><span class="st">«class»</span><span class="nm">FonctionReelle</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>signature</dt><dd>\(f:D\subset\R^n\to\R,\ (x_1,\dots,x_n)\mapsto f(x_1,\dots,x_n)\). En pratique \(n=2\) ou \(3\).</dd></div>
+      <div><dt>graphe</dt><dd>Pour \(n=2\) : la surface \(S_f\) d'équation \(z=f(x,y)\).</dd></div>
+      <div><dt>courbeDeNiveau</dt><dd>\(N_k=\{(x,y)\in\R^2,\ f(x,y)=k\}\). Pour \(f=x^2+y^2\) et \(k&gt;0\) : cercle de rayon \(\sqrt k\).</dd></div>
+      <div><dt>domaine</dt><dd>\(D_f\) : le plus grand ensemble où \(f(x_1,\dots,x_n)\) a un sens.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">Ensemble domaineDeDefinition()</div>
+        <ol><li>Lister les contraintes : dénominateur \(\ne0\), radicande \(\ge0\), argument d'un \(\ln\) \(&gt;0\).</li>
+        <li>Résoudre chaque contrainte dans le plan et retirer les points interdits.</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\dfrac{xy}{x^2+y^4}\) : \(D_f=\R^2\setminus\{(0,0)\}\). &nbsp; \(\dfrac{\cos(x^2y)}{x^2-y^2}\) : on retire les droites \(y=x\) et \(y=-x\).</div></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="2" href="#Champs">ch2.ChampScalaire</a><a data-p="4" href="#IntegraleDouble">ch4.IntegraleDouble</a></div></div>
+  </article>
+
+  <article class="cls" id="Limite">
+    <header><span class="st">«class»</span><span class="nm">Limite</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>definition</dt><dd>\(\lim_{X\to a}f(X)=\ell\) si \(\forall\epsilon&gt;0\ \exists\delta&gt;0,\ 0\lt\|X-a\|\lt\delta\Rightarrow|f(X)-\ell|\lt\epsilon\).</dd></div>
+      <div><dt>unicite</dt><dd>La limite doit être la même quel que soit le chemin suivi pour approcher \(a\). Deux chemins, deux valeurs : pas de limite.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">boolean existe(f, (0,0))</div>
+        <ol><li>Tester les trois directions usuelles : \(f(0,y)\), \(f(x,0)\), \(f(x,x)\).</li>
+        <li>Si deux résultats diffèrent : la limite n'existe pas, c'est terminé.</li>
+        <li>S'ils sont égaux à \(\ell\) : on ne peut rien conclure. Il faut prouver, avec l'une des trois méthodes ci-dessous.</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(f=\dfrac{x^2-y^2}{x^2+y^2}\) : \(f(x,0)=1\) et \(f(x,x)=0\), pas de limite en \((0,0)\).</div></div>
+      <div class="m"><div class="sig">double parPolaires(f)</div>
+        <ol><li>Poser \(x=r\cos\theta,\ y=r\sin\theta\), puis simplifier avec \(x^2+y^2=r^2\).</li>
+        <li>Faire tendre \(r\to0\). Le résultat ne doit pas dépendre de \(\theta\).</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\dfrac{x^2y}{x^2+y^2}=r\cos^2\theta\sin\theta\to0\).</div></div>
+      <div class="m"><div class="sig">double parMajoration(f) <i>// gendarmes</i></div>
+        <ol><li>Majorer \(|f(x,y)-\ell|\) par une quantité qui tend vers 0.</li>
+        <li>Inégalité utile : \(x^2+y^2\ge2|x||y|\), donc \(\dfrac1{x^2+y^2}\le\dfrac1{2|x||y|}\).</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\left|\dfrac{xy^3}{x^2+y^2}\right|\le\dfrac{|xy^3|}{2|x||y|}=\dfrac{y^2}2\to0\).</div></div>
+      <div class="m"><div class="sig">double parDL(f)</div>
+        <p>Remplacer \(\sin,\cos,\exp,\ln\) par leur développement limité en 0 le long de chaque direction : \(\sin u=u-\frac{u^3}{6}+o(u^3)\), \(\cos u=1-\frac{u^2}2+\frac{u^4}{24}+o(u^4)\).</p>
+        <div class="ex-box"><b>Exemple.</b> \(f=\dfrac{\cos x-1+x^2/2}{x^4+y^4}\) : \(f(0,y)=0\), \(f(x,0)\to\frac1{24}\), \(f(x,x)\to\frac1{48}\). Pas de limite.</div></div>
+    </div>
+    <div class="cmp"><h4>Import</h4><div class="rels"><a data-p="3" href="#Coordonnees">ch3.Coordonnees.polaires</a></div></div>
+  </article>
+
+  <article class="cls" id="Continuite">
+    <header><span class="st">«class»</span><span class="nm">Continuite</span> <span class="ex">uses <a href="#Limite">Limite</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>definition</dt><dd>\(f\) continue en \(a\in D\) si \(\lim_{X\to a}f(X)=f(a)\). Continue sur \(D\) si elle l'est en chaque point.</dd></div>
+      <div><dt>vectorielle</dt><dd>\(f=(f_1,\dots,f_m)\) est continue en \(a\) si chaque composante \(f_i\) l'est.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">boolean estContinueEn(f, a) <i>// fonction définie par morceaux</i></div>
+        <ol><li>Hors du point de raccord : somme, produit, quotient de fonctions usuelles, donc continue.</li>
+        <li>Au point de raccord : calculer \(\lim_{X\to a}f(X)\) avec <a href="#Limite">Limite</a>.</li>
+        <li>Comparer avec la valeur imposée \(f(a)\).</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(f=(x^2+y^2)\sin\frac1{x^2+y^2}\), \(f(0,0)=0\) : \(|f|\le x^2+y^2\to0=f(0,0)\), continue.</div></div>
+    </div>
+  </article>
+
+  <article class="cls" id="DeriveePartielle">
+    <header><span class="st">«class»</span><span class="nm">DeriveePartielle</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>definition</dt><dd>\[\pd f{x_i}(a)=\lim_{h\to0}\frac{f(a_1,\dots,a_i+h,\dots,a_n)-f(a)}h\] si cette limite existe et est finie.</dd></div>
+      <div><dt>cas n = 2</dt><dd>\(\pd fx(x_0,y_0)=\lim\limits_{h\to0}\dfrac{f(x_0+h,y_0)-f(x_0,y_0)}h\), et pareil en \(y\) avec \(f(x_0,y_0+k)\).</dd></div>
+      <div><dt>regles</dt><dd>\(\pd{(fg)}{x_i}=\pd f{x_i}g+f\pd g{x_i}\) et \(\pd{(\alpha f+g)}{x_i}=\alpha\pd f{x_i}+\pd g{x_i}\).</dd></div>
+      <div><dt>ordre2</dt><dd>\(\pd{^2f}{x_i\partial x_j}=\pd{}{x_i}\Big(\pd f{x_j}\Big)\). Pour \(n=2\) : \(\pd{^2f}{x^2},\ \pd{^2f}{y^2},\ \pd{^2f}{x\partial y},\ \pd{^2f}{y\partial x}\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">Fonction deriver(f, x_i)</div>
+        <ol><li>Geler toutes les autres variables : ce sont des constantes.</li>
+        <li>Dériver comme une fonction d'une variable.</li>
+        <li>En un point de raccord, revenir au taux d'accroissement de la définition.</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\pd{}x(x^3-3x^2y^2+y)=3x^2-6xy^2\).</div></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="2" href="#Nabla">ch2.Nabla</a><a data-p="6" href="#SurfaceParametree">ch6.vecteursTangents</a></div></div>
+  </article>
+
+  <article class="cls" id="ClasseCk">
+    <header><span class="st">«class»</span><span class="nm">ClasseCk</span> <span class="ex">uses <a href="#DeriveePartielle">DeriveePartielle</a>, <a href="#Continuite">Continuite</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>C1</dt><dd>Toutes les \(\pd f{x_i}\) existent et sont continues.</dd></div>
+      <div><dt>C2</dt><dd>\(f\) est \(C^1\) et ses dérivées partielles d'ordre 1 sont \(C^1\).</dd></div>
+      <div><dt>Ck</dt><dd>Toutes les dérivées partielles jusqu'à l'ordre \(k\) existent et sont continues.</dd></div>
+      <div><dt>gratuit</dt><dd>Polynômes et fractions rationnelles en \(x,y\) sont \(C^2\) sur leur ensemble de définition.</dd></div>
+      <div><dt>schwarz</dt><dd>Si \(f\) est \(C^2\) : \(\pd{^2f}{x_i\partial x_j}=\pd{^2f}{x_j\partial x_i}\). L'ordre de dérivation ne compte pas.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="2" href="#Proprietes">ch2 : rot(grad f) = 0</a><a data-p="5" href="#FormeDifferentielle">ch5 : forme fermée</a></div></div>
+  </article>
+
+  <article class="cls" id="FonctionVectorielle">
+    <header><span class="st">«class»</span><span class="nm">FonctionVectorielle</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>signature</dt><dd>\(f:U\subset\R^n\to\R^m,\ f=(f_1,\dots,f_m)\) où chaque \(f_i\) est une <a href="#FonctionReelle">FonctionReelle</a>.</dd></div>
+      <div><dt>regularite</dt><dd>\(f\) continue ou \(C^1\) si et seulement si toutes ses composantes le sont.</dd></div>
+      <div><dt>jacobienne</dt><dd>\[J_f(a)=\begin{pmatrix}\pd{f_1}{x_1}(a)&amp;\cdots&amp;\pd{f_1}{x_n}(a)\\ \vdots&amp;&amp;\vdots\\ \pd{f_m}{x_1}(a)&amp;\cdots&amp;\pd{f_m}{x_n}(a)\end{pmatrix}\in M_{m,n}(\R)\] Une ligne par composante, une colonne par variable.</dd></div>
+      <div><dt>jacobien</dt><dd>Si \(m=n\) : \(\det J_f(a)\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="2" href="#Champs">ch2.ChampVecteurs</a><a data-p="4" href="#ChangementDeVariables">ch4.ChangementDeVariables</a></div></div>
+  </article>
+
+  </div>
+</section>
+
+<!-- ============ CH 2 ============ -->
+<section class="pkg" id="pkg2" data-p="2">
+  <header>
+    <h2><small>CHAPITRE 2</small>Analyse vectorielle</h2>
+    <div class="src"><b>package</b> analyse3.ch2.vectorielle; <span>// D est un ouvert de ℝ³</span><br><b>import</b> <a data-p="1" href="#DeriveePartielle">analyse3.ch1.fonctions.DeriveePartielle</a>;<br><b>import</b> <a data-p="3" href="#Vecteur3D">analyse3.ch3.geometrie.Vecteur3D</a>; <span>// produit scalaire et vectoriel</span></div>
+  </header>
+  <div class="classes">
+
+  <article class="cls" id="Champs">
+    <header><span class="st">«class»</span><span class="nm">ChampScalaire, ChampVecteurs</span> <span class="ex">extends <a data-p="1" href="#FonctionReelle">ch1.FonctionReelle</a>, <a data-p="1" href="#FonctionVectorielle">ch1.FonctionVectorielle</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>ChampScalaire</dt><dd>\(f:D\to\R\). À chaque point \(M(x,y,z)\) un nombre \(f(M)\). Exemple : \(f=x+y^2\).</dd></div>
+      <div><dt>ChampVecteurs</dt><dd>\(\v F:D\to\R^3,\ \v F=(f_x,f_y,f_z)\). À chaque point un vecteur. Exemple : \(\v F=(x+y^2,\ yz+2,\ 1)\).</dd></div>
+    </dl></div>
+  </article>
+
+  <article class="cls" id="Nabla">
+    <header><span class="st">«operator»</span><span class="nm">Nabla</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>nabla</dt><dd>\(\v\nabla=\Big(\pd{}x,\pd{}y,\pd{}z\Big)\). Ce n'est pas un vecteur, c'est un opérateur : il sert à retenir les formules.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">ChampVecteurs grad(ChampScalaire f) <i>// f de classe C1</i></div>
+        \[\grad f=\v\nabla f=\Big(\pd fx,\pd fy,\pd fz\Big)\]
+        <div class="ex-box"><b>Exemple.</b> \(f=xz+y^2\) : \(\v\nabla f=(z,2y,x)\).</div></div>
+      <div class="m"><div class="sig">ChampScalaire div(ChampVecteurs F) <i>// F de classe C1</i></div>
+        \[\Div\v F=\v\nabla\cdot\v F=\pd{f_x}x+\pd{f_y}y+\pd{f_z}z\]
+        <p>Mesure la tendance du champ à se disperser.</p>
+        <div class="ex-box"><b>Exemple.</b> \(\v F=(x+y^2,\ yz+2,\ ze^x)\) : \(\Div\v F=1+z+e^x\).</div></div>
+      <div class="m"><div class="sig">ChampVecteurs rot(ChampVecteurs F) <i>// F de classe C1</i></div>
+        \[\rot\v F=\v\nabla\wedge\v F=\begin{pmatrix}\pd{f_z}y-\pd{f_y}z\\[4pt] \pd{f_x}z-\pd{f_z}x\\[4pt] \pd{f_y}x-\pd{f_x}y\end{pmatrix}\]
+        <p>Mesure la façon dont le champ tourne autour d'un point. Se calcule comme un <a data-p="3" href="#Vecteur3D">produit vectoriel</a> avec \(\v\nabla\).</p>
+        <div class="ex-box"><b>Exemples.</b> Même \(\v F\) : \(\rot\v F=(-y,\ -ze^x,\ -2y)\). &nbsp; \((x,y,z)\) : rot nul. &nbsp; \((z,x,y)\) : rot \(=(1,1,1)\).</div></div>
+      <div class="m"><div class="sig">ChampScalaire laplacien(ChampScalaire f) <i>// f de classe C2</i></div>
+        \[\Delta f=\pd{^2f}{x^2}+\pd{^2f}{y^2}+\pd{^2f}{z^2}\]
+        <div class="ex-box"><b>Exemple.</b> \(f=xz+y^2\) : \(\Delta f=2\).</div></div>
+      <div class="m"><div class="sig">ChampVecteurs laplacien(ChampVecteurs F) <i>// surcharge</i></div>
+        \[\v\Delta\v F=(\Delta f_x,\ \Delta f_y,\ \Delta f_z)\]
+        <div class="ex-box"><b>Exemple.</b> \(\v F=(x+y^2,\ yz+2,\ ze^x)\) : \(\v\Delta\v F=(2,0,ze^x)\).</div></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="6" href="#Stokes">ch6.Stokes (rot)</a><a data-p="6" href="#Ostrogradsky">ch6.GreenOstrogradsky (div)</a><a data-p="5" href="#FormeDifferentielle">ch5.FormeDifferentielle (rot)</a></div></div>
+  </article>
+
+  <article class="cls" id="Proprietes">
+    <header><span class="st">«static»</span><span class="nm">ProprietesOperateurs</span> <span class="ex">uses <a href="#Nabla">Nabla</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>linearite</dt><dd>grad, div, rot et \(\Delta\) sont linéaires : \(\grad(\alpha f+\beta g)=\alpha\grad f+\beta\grad g\), idem pour les trois autres.</dd></div>
+      <div><dt>composition</dt><dd>
+        \[\rot(\grad f)=\v0\qquad \Div(\rot\v f)=0\]
+        \[\Delta f=\Div(\grad f)\]
+        \[\rot(\rot\v f)=\grad(\Div\v f)-\v\Delta\v f\]</dd></div>
+      <div><dt>leibniz</dt><dd>
+        \[\grad(\Phi\Psi)=\Phi\,\grad\Psi+\Psi\,\grad\Phi\]
+        \[\Div(\Phi\v A)=\Phi\,\Div\v A+\grad\Phi\cdot\v A\]
+        \[\rot(\Phi\v A)=\Phi\,\rot\v A+\grad\Phi\wedge\v A\]
+        \[\Div(\v A\wedge\v B)=\v B\cdot\rot\v A-\v A\cdot\rot\v B\]</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Import</h4><div class="rels"><a data-p="1" href="#ClasseCk">ch1.ClasseCk.schwarz</a></div></div>
+  </article>
+
+  <article class="cls" id="ChampConservatif">
+    <header><span class="st">«class»</span><span class="nm">ChampConservatif</span> <span class="ex">extends <a href="#Champs">ChampVecteurs</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>definition</dt><dd>\(\v F\) est conservatif (champ de gradients, dérive d'un potentiel scalaire \(f\)) si \(\v F=\grad f\), c'est-à-dire \((f_1,f_2,f_3)=\Big(\pd fx,\pd fy,\pd fz\Big)\).</dd></div>
+      <div><dt>ouvertEtoile</dt><dd>\(D\) est étoilé s'il existe \(A\in D\) tel que pour tout \(M\in D\), le segment \([AM]\subset D\). \(\R^2\), \(\R^3\), un pavé ouvert le sont. Un domaine en plusieurs morceaux ne l'est pas.</dd></div>
+      <div><dt>primitivationRot</dt><dd>\(D\) étoilé, \(\v F\) de classe \(C^1\) et \(\rot\v F=\v0\) \(\Rightarrow\) il existe \(f\) avec \(\v F=\grad f\).</dd></div>
+      <div><dt>primitivationDiv</dt><dd>\(D\) étoilé, \(\v F\) de classe \(C^1\) et \(\Div\v F=0\) \(\Rightarrow\) il existe \(\v G\) avec \(\v F=\rot\v G\) (champ de rotationnel).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">boolean estConservatif(F, D)</div>
+        <ol><li>Vérifier que \(D\) est un ouvert étoilé et \(\v F\) de classe \(C^1\).</li>
+        <li>Calculer \(\rot\v F\).</li>
+        <li>\(\rot\v F=\v0\) : conservatif. Sinon non, car \(\rot(\grad f)=\v0\) toujours.</li></ol></div>
+      <div class="m"><div class="sig">ChampScalaire trouverPotentiel(F)</div>
+        <ol><li>Intégrer \(\pd fx=f_1\) par rapport à \(x\) : \(f=\int f_1\,\dd x+g(y,z)\).</li>
+        <li>Dériver ce \(f\) par rapport à \(y\), égaler à \(f_2\) : on obtient \(\pd gy\), donc \(g\) à une fonction \(h(z)\) près.</li>
+        <li>Dériver par rapport à \(z\), égaler à \(f_3\) : on obtient \(h\).</li>
+        <li>Contrôler en recalculant \(\grad f\).</li></ol></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="5" href="#FormeDifferentielle">ch5.FormeDifferentielle.exacte</a></div></div>
+  </article>
+
+  </div>
+</section>
+
+<!-- ============ CH 3 ============ -->
+<section class="pkg" id="pkg3" data-p="3">
+  <header>
+    <h2><small>CHAPITRE 3</small>Calculs dans le plan et dans l'espace</h2>
+    <div class="src"><b>package</b> analyse3.ch3.geometrie; <span>// aucun import : c'est la boîte à outils des chapitres 4, 5 et 6</span></div>
+  </header>
+  <div class="classes">
+
+  <article class="cls" id="Vecteur2D">
+    <header><span class="st">«class»</span><span class="nm">Vecteur2D</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>coordonnees</dt><dd>\(\v u=(x,y)\), \(\v v=(x',y')\) dans un repère orthonormé.</dd></div>
+      <div><dt>norme</dt><dd>\(\|\v u\|=\sqrt{x^2+y^2}\). Unitaire si \(\|\v u\|=1\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double det(u, v)</div>
+        \[\det(\v u,\v v)=\begin{vmatrix}x&amp;x'\\y&amp;y'\end{vmatrix}=xy'-x'y\]
+        <p>\(\v u\) et \(\v v\) colinéaires (\(\v u=\lambda\v v\)) si et seulement si \(\det(\v u,\v v)=0\).</p></div>
+      <div class="m"><div class="sig">double produitScalaire(u, v)</div>
+        \[\v u\cdot\v v=xx'+yy'=\|\v u\|\,\|\v v\|\cos(\v u,\v v)\]
+        <p>Symétrique, bilinéaire. \(\v u\perp\v v\) si et seulement si \(\v u\cdot\v v=0\).</p></div>
+    </div>
+  </article>
+
+  <article class="cls" id="Vecteur3D">
+    <header><span class="st">«class»</span><span class="nm">Vecteur3D</span> <span class="ex">extends <a href="#Vecteur2D">Vecteur2D</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>coordonnees</dt><dd>\(\v u=(x,y,z)\), \(\v v=(x',y',z')\), \(\|\v u\|=\sqrt{x^2+y^2+z^2}\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double produitScalaire(u, v)</div>
+        \[\v u\cdot\v v=xx'+yy'+zz'\]<p>Nul si et seulement si les vecteurs sont orthogonaux.</p></div>
+      <div class="m"><div class="sig">Vecteur3D produitVectoriel(u, v)</div>
+        \[\v u\wedge\v v=\begin{pmatrix}yz'-zy'\\zx'-xz'\\xy'-yx'\end{pmatrix}\]
+        <ul><li>\(\v u\wedge\v v\) est orthogonal à \(\v u\) et à \(\v v\), et \((\v u,\v v,\v u\wedge\v v)\) est direct (règle de la main droite : pouce, index, majeur).</li>
+        <li>\(\|\v u\wedge\v v\|=\|\v u\|\,\|\v v\|\,|\sin(\v u,\v v)|\).</li>
+        <li>\(\v u\wedge\v v=-\v v\wedge\v u\) : l'ordre change le signe.</li>
+        <li>Colinéaires si et seulement si \(\v u\wedge\v v=\v0\).</li>
+        <li>Distributif sur \(+\), et \(\v u\wedge(k\v v)=k(\v u\wedge\v v)\).</li></ul></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="2" href="#Nabla">ch2.Nabla (div, rot)</a><a data-p="5" href="#IntegraleCurviligne">ch5 : F·γ′</a><a data-p="6" href="#SurfaceParametree">ch6 : Tu ∧ Tv</a></div></div>
+  </article>
+
+  <article class="cls" id="Coordonnees">
+    <header><span class="st">«enum»</span><span class="nm">Coordonnees</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>POLAIRES</dt><dd>\(x=r\cos\theta,\ y=r\sin\theta\), avec \(r\ge0,\ \theta\in[0,2\pi[\). Donne \(x^2+y^2=r^2\). Jacobien \(r\).</dd></div>
+      <div><dt>CYLINDRIQUES</dt><dd>\(x=r\cos\theta,\ y=r\sin\theta,\ z=z\). Pour les objets d'axe \((Oz)\) : cylindre, paraboloïde, cône. Jacobien \(r\).</dd></div>
+      <div><dt>SPHERIQUES</dt><dd>\(x=r\sin\varphi\cos\theta,\ y=r\sin\varphi\sin\theta,\ z=r\cos\varphi\), avec \(r=OM\), \(\varphi\in[0,\pi]\) l'angle depuis \((Oz)\), \(\theta\in[0,2\pi]\). Pour boules et ellipsoïdes. Jacobien \(r^2\sin\varphi\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Schémas</h4><div class="figs"><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Polaires (r, θ)"><path class="ax" d="M40 150L190 150M40 150L40 20"/><text x="182" y="165">x</text><text x="26" y="26">y</text><text x="26" y="165">O</text><path class="dsh" d="M122 93L122 150M122 93L40 93"/><path class="sh" d="M40 150L122 93"/><circle class="pt" cx="122" cy="93" r="3"/><path class="an" d="M70 150A30 30 0 0 0 64.6 132.8"/><text x="76" y="142">θ</text><text x="72" y="112">r</text><text x="128" y="88">M</text><text x="98" y="165">r cos θ</text><text x="44" y="88">r sin θ</text></svg><figcaption>Polaires (r, θ)</figcaption></figure><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Cylindriques (r, θ, z)"><path class="ax" d="M90 130L90 18M90 130L188 130M90 130L38 172"/><text x="94" y="22">z</text><text x="180" y="124">y</text><text x="30" y="170">x</text><text x="76" y="126">O</text><path class="dsh" d="M118.9 150.3L118.9 70.3"/><path class="sh" d="M90 130L118.9 150.3"/><circle class="pt" cx="118.9" cy="70.3" r="3"/><circle class="pt2" cx="118.9" cy="150.3" r="2.5"/><path class="an" d="M77.9 139.9Q92 149 108 142.7"/><text x="88" y="160">θ</text><text x="124" y="68">M</text><text x="124" y="162">M′</text><text x="124" y="112">z</text><text x="106" y="134">r</text></svg><figcaption>Cylindriques (r, θ, z)</figcaption></figure><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Sphériques (r, θ, φ)"><path class="ax" d="M90 130L90 18M90 130L188 130M90 130L38 172"/><text x="94" y="22">z</text><text x="180" y="124">y</text><text x="30" y="170">x</text><text x="76" y="126">O</text><path class="dsh" d="M118.9 150.3L118.9 60M90 130L118.9 150.3"/><path class="sh" d="M90 130L118.9 60"/><circle class="pt" cx="118.9" cy="60" r="3"/><circle class="pt2" cx="118.9" cy="150.3" r="2.5"/><path class="an" d="M77.9 139.9Q92 149 108 142.7"/><text x="88" y="160">θ</text><path class="an" d="M90 104Q96 100 99.9 106"/><text x="96" y="94">φ</text><text x="124" y="58">M</text><text x="124" y="162">M′</text><text x="108" y="98">r</text></svg><figcaption>Sphériques (r, θ, φ)</figcaption></figure></div></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">Parametrage choisir(objet)</div>
+        <ol><li>Compter les paramètres : 1 pour une courbe, 2 pour une surface, 3 pour un solide.</li>
+        <li>\(x^2+y^2\) dans l'équation : polaires ou cylindriques.</li>
+        <li>\(x^2+y^2+z^2\) : sphériques.</li>
+        <li>Coefficients \(\frac{x^2}{a^2},\frac{y^2}{b^2},\frac{z^2}{c^2}\) : poser \(X=\frac xa,\ Y=\frac yb,\ Z=\frac zc\) pour revenir au cercle ou à la boule unité.</li>
+        <li>Centre \(\Omega\) décalé : ajouter \(\Omega_1,\Omega_2\) aux formules.</li>
+        <li>Pour le bord d'un solide, fixer le paramètre qui joue le rôle de rayon.</li></ol></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="1" href="#Limite">ch1.Limite</a><a data-p="4" href="#ChangementDeVariables">ch4.ChangementDeVariables</a><a data-p="6" href="#SurfaceParametree">ch6.SurfaceParametree</a></div></div>
+  </article>
+
+  </div>
+
+  <article class="cls" id="CourbePlane">
+    <header><span class="st">«class»</span><span class="nm">CourbePlane</span> <span class="ex">γ : D ⊂ ℝ → ℝ², t ↦ (x(t), y(t))</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>orientation</dt><dd>Sur \(D=[a,b]\), la courbe va de l'origine \(\gamma(a)\) vers l'extrémité \(\gamma(b)\). Fermée si \(\gamma(a)=\gamma(b)\). Le paramétrage n'est pas unique.</dd></div>
+      <div><dt>surfacePlane</dt><dd>L'intérieur d'une courbe fermée se paramètre avec deux paramètres : \(\psi:(u,v)\mapsto(x(u,v),y(u,v))\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Sous-classes</h4>
+      <div class="tw"><table>
+        <tr><th>extends CourbePlane</th><th>Équation cartésienne</th><th>Paramétrage γ</th><th>Fermée</th><th>Intérieur ψ(r, θ)</th></tr>
+        <tr><td><code>Droite</code></td><td>\(ax+by+c=0\)<br>directeur \((-b,a)\), normal \((a,b)\)</td><td>\(t\mapsto\big(-\tfrac1a(bt+c),\ t\big)\), \(a\ne0\)</td><td>non</td><td></td></tr>
+        <tr><td><code>Cercle</code> centre \(O\)</td><td>\(x^2+y^2=R^2\)</td><td>\(\theta\mapsto(R\cos\theta,R\sin\theta)\), \(\theta\in[0,2\pi]\)</td><td>oui</td><td>disque : \((r\cos\theta,r\sin\theta)\), \(r\in[0,R]\)</td></tr>
+        <tr><td><code>Cercle</code> centre \(\Omega\)</td><td>\((x-\Omega_1)^2+(y-\Omega_2)^2=R^2\)</td><td>\((\Omega_1+R\cos\theta,\ \Omega_2+R\sin\theta)\)</td><td>oui</td><td>\((\Omega_1+r\cos\theta,\ \Omega_2+r\sin\theta)\), \(r\in[0,R]\)</td></tr>
+        <tr><td><code>Parabole</code></td><td>\(y=a(x-b)^2+c\)<br>ou \(x=a(y-b)^2+c\)</td><td>\(t\mapsto(t,\ a(t-b)^2+c)\), \(t\in\R\)</td><td>non</td><td></td></tr>
+        <tr><td><code>Ellipse</code> centre \(O\)</td><td>\(\dfrac{x^2}{a^2}+\dfrac{y^2}{b^2}=1\)</td><td>\(\theta\mapsto(a\cos\theta,b\sin\theta)\)</td><td>oui</td><td>\((ar\cos\theta,\ br\sin\theta)\), \(r\in[0,1]\)</td></tr>
+        <tr><td><code>Ellipse</code> centre \(\Omega\)</td><td>\(\dfrac{(x-\Omega_1)^2}{a^2}+\dfrac{(y-\Omega_2)^2}{b^2}=1\)</td><td>\((\Omega_1+a\cos\theta,\ \Omega_2+b\sin\theta)\)</td><td>oui</td><td>\((\Omega_1+ar\cos\theta,\ \Omega_2+br\sin\theta)\), \(r\in[0,1]\)</td></tr>
+      </table></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="5" href="#CourbeParametree">ch5.CourbeParametree</a><a data-p="4" href="#IntegraleDouble">ch4 : domaines d'intégration</a></div></div>
+  </article>
+
+  <article class="cls" id="Solide">
+    <header><span class="st">«class»</span><span class="nm">Solide</span> <span class="ex">uses <a href="#Coordonnees">Coordonnees</a></span></header>
+    <div class="cmp"><h4>Schémas</h4><div class="figs"><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Cylindre : r ≤ R"><path class="ax" d="M100 178L100 12"/><text x="104" y="18">z</text><path class="sh" d="M45 45L45 150A55 15 0 0 0 155 150L155 45"/><ellipse class="sh" cx="100" cy="45" rx="55" ry="15"/><path class="dsh" d="M45 150A55 15 0 0 1 155 150"/><path class="an" d="M100 45L155 45"/><text x="122" y="40">R</text><text x="160" y="50">z = b</text><text x="160" y="155">z = a</text></svg><figcaption>Cylindre : r ≤ R</figcaption></figure><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Paraboloïde : r ≤ √z"><path class="ax" d="M100 178L100 12"/><text x="104" y="18">z</text><path class="sh" d="M45 45Q100 275 155 45"/><ellipse class="sh" cx="100" cy="45" rx="55" ry="15"/><path class="dsh" d="M73 105A27 8 0 0 0 127 105A27 8 0 0 0 73 105"/><path class="an" d="M100 105L127 105"/><text x="131" y="109">r ≤ √z</text><text x="160" y="50">z = a</text></svg><figcaption>Paraboloïde : r ≤ √z</figcaption></figure><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Cône : r ≤ z"><path class="ax" d="M100 178L100 12"/><text x="104" y="18">z</text><path class="sh" d="M45 45L100 160L155 45"/><ellipse class="sh" cx="100" cy="45" rx="55" ry="15"/><path class="dsh" d="M73.7 105A26.3 8 0 0 0 126.3 105A26.3 8 0 0 0 73.7 105"/><path class="an" d="M100 105L126.3 105"/><text x="131" y="109">r ≤ z</text><text x="160" y="50">z = a</text></svg><figcaption>Cône : r ≤ z</figcaption></figure><figure class="fg"><svg viewBox="0 0 200 190" role="img" aria-label="Boule : r ≤ R, φ depuis (Oz)"><path class="ax" d="M100 178L100 12"/><text x="104" y="18">z</text><circle class="sh" cx="100" cy="98" r="60"/><path class="dsh" d="M40 98A60 17 0 0 1 160 98"/><path class="an" d="M40 98A60 17 0 0 0 160 98"/><path class="sh" d="M100 98L138.6 52"/><circle class="pt" cx="138.6" cy="52" r="3"/><path class="an" d="M100 76Q107 73 114 81"/><text x="106" y="68">φ</text><text x="124" y="84">R</text><text x="144" y="48">M</text></svg><figcaption>Boule : r ≤ R, φ depuis (Oz)</figcaption></figure></div></div>
+    <div class="cmp"><h4>Sous-classes</h4>
+      <div class="tw"><table>
+        <tr><th>extends Solide</th><th>Équation cartésienne</th><th>Paramétrage du solide (3 paramètres)</th><th>Surface latérale (2 paramètres)</th></tr>
+        <tr><td><code>Plan</code></td><td>\(ax+by+cz+d=0\)</td><td colspan="2">Vecteur normal \((a,b,c)\).</td></tr>
+        <tr><td><code>Cube</code></td><td>\([a,b]^3\)</td><td colspan="2">Cartésien : \(a\le x,y,z\le b\).</td></tr>
+        <tr><td><code>Parallelepipede</code></td><td>\([a,b]\times[c,d]\times[e,f]\)</td><td colspan="2">Cartésien : chaque variable dans son intervalle.</td></tr>
+        <tr><td><code>Cylindre</code></td><td>\(x^2+y^2\le R^2,\ a\le z\le b\)</td><td>cylindriques, \(r\in[0,R]\), \(\theta\in[0,2\pi]\), \(z\in[a,b]\)</td><td>\((R\cos\theta,\ R\sin\theta,\ z)\)</td></tr>
+        <tr><td><code>Paraboloide</code></td><td>\(x^2+y^2\le z,\ 0\le z\le a\)</td><td>cylindriques, \(0\le r\le\sqrt z\), \(\theta\in[0,2\pi]\), \(z\in[0,a]\)</td><td>\((\sqrt z\cos\theta,\ \sqrt z\sin\theta,\ z)\)</td></tr>
+        <tr><td><code>Cone</code></td><td>\(x^2+y^2\le z^2,\ 0\le z\le a\)</td><td>cylindriques, \(0\le r\le z\), \(\theta\in[0,2\pi]\), \(z\in[0,a]\)</td><td>\((z\cos\theta,\ z\sin\theta,\ z)\)</td></tr>
+        <tr><td><code>Boule</code></td><td>\(x^2+y^2+z^2\le R^2\)</td><td>sphériques, \(r\in[0,R]\), \(\theta\in[0,2\pi]\), \(\varphi\in[0,\pi]\)</td><td>sphère : \((R\sin\varphi\cos\theta,\ R\sin\varphi\sin\theta,\ R\cos\varphi)\)</td></tr>
+        <tr><td><code>Ellipsoide</code></td><td>\(\dfrac{x^2}{a^2}+\dfrac{y^2}{b^2}+\dfrac{z^2}{c^2}\le1\)</td><td>\((ar\sin\varphi\cos\theta,\ br\sin\varphi\sin\theta,\ cr\cos\varphi)\), \(r\in[0,1]\)</td><td>\((a\sin\varphi\cos\theta,\ b\sin\varphi\sin\theta,\ c\cos\varphi)\)</td></tr>
+      </table></div>
+      <p class="warn"><b>piège</b>Dans le paraboloïde et le cône, la borne de \(r\) dépend de \(z\). Il faut donc intégrer en \(r\) avant \(z\).</p>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="4" href="#IntegraleTriple">ch4.IntegraleTriple</a><a data-p="6" href="#SurfaceParametree">ch6.SurfaceParametree</a><a data-p="6" href="#Ostrogradsky">ch6.GreenOstrogradsky</a></div></div>
+  </article>
+</section>
+
+<!-- ============ CH 4 ============ -->
+<section class="pkg" id="pkg4" data-p="4">
+  <header>
+    <h2><small>CHAPITRE 4</small>Intégrales multiples</h2>
+    <div class="src"><b>package</b> analyse3.ch4.integrales;<br><b>import</b> <a data-p="1" href="#FonctionVectorielle">analyse3.ch1.fonctions.FonctionVectorielle</a>; <span>// Jacobienne</span><br><b>import</b> <a data-p="3" href="#Coordonnees">analyse3.ch3.geometrie.Coordonnees</a>;<br><b>import</b> <a data-p="3" href="#Solide">analyse3.ch3.geometrie.Solide</a>;</div>
+  </header>
+  <div class="classes">
+
+  <article class="cls" id="IntegraleDouble">
+    <header><span class="st">«class»</span><span class="nm">IntegraleDouble</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>sens</dt><dd>Pour \(f\ge0\) continue sur \(D\) borné, \(\iint_Df(x,y)\,\dd x\,\dd y\) est le volume entre la surface \(z=f(x,y)\) et le plan \(xOy\), au-dessus de \(D\).</dd></div>
+      <div><dt>proprietes</dt><dd>Linéaire. Positive si \(f\ge0\). Croissante, d'où \(\big|\iint_Df\big|\le\iint_D|f|\). Additive : \(\iint_{D_1\cup D_2}=\iint_{D_1}+\iint_{D_2}\) si \(D_1,D_2\) disjoints.</dd></div>
+      <div><dt>aire</dt><dd>\(\text{Aire}(D)=\iint_D\dd x\,\dd y\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double surRectangle(f, [a,b]×[c,d])</div>
+        \[\iint_Df=\int_c^d\Big(\int_a^bf(x,y)\,\dd x\Big)\dd y=\int_a^b\Big(\int_c^df(x,y)\,\dd y\Big)\dd x\]
+        <p>L'ordre est libre. Si \(f(x,y)=g(x)\,h(y)\) (séparable) : \(\iint_Df=\int_a^bg(x)\,\dd x\times\int_c^dh(y)\,\dd y\).</p>
+        <div class="ex-box"><b>Exemples.</b> \(\iint e^{x+y}\) sur \([0,1]\times[1,2]\) \(=(e-1)(e^2-e)\). &nbsp; \(\iint(x^2y+2y^3)\) sur \([-1,1]\times[0,1]\) \(=\frac13+1=\frac43\).</div></div>
+      <div class="m"><div class="sig">double surDomaineQuelconque(f, D)</div>
+        <ol><li>Dessiner \(D\).</li>
+        <li>L'écrire en tranches : \(a\le x\le b,\ y_1(x)\le y\le y_2(x)\).</li>
+        <li>Intégrer d'abord en \(y\) entre les bornes variables : le résultat dépend de \(x\).</li>
+        <li>Intégrer ce résultat en \(x\) sur \([a,b]\).</li></ol>
+        \[\iint_{D}f=\int_a^b\Big(\int_{y_1(x)}^{y_2(x)}f(x,y)\,\dd y\Big)\dd x\]
+        <p class="warn"><b>piège</b>Les bornes qui dépendent d'une variable vont toujours à l'intérieur. Les bornes extérieures sont des constantes.</p>
+        <div class="ex-box"><b>Exemple.</b> \(\iint xy\) sur le triangle \(0\le y\le x\le1\) : \(\int_0^1x\cdot\frac{x^2}2\,\dd x=\frac18\). Sur le disque unité : 0 par symétrie.</div></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="5" href="#GreenRiemann">ch5.GreenRiemann</a><a data-p="6" href="#Flux">ch6.Flux</a></div></div>
+  </article>
+
+  <article class="cls" id="ChangementDeVariables">
+    <header><span class="st">«class»</span><span class="nm">ChangementDeVariables</span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>T</dt><dd>\(T:\Delta\to D,\ (u,v)\mapsto(x(u,v),y(u,v))\), de classe \(C^1\) et bijective. On remplace \(D\) par un domaine \(\Delta\) plus simple.</dd></div>
+      <div><dt>jacobien</dt><dd>\[\det J_T(u,v)=\begin{vmatrix}\pd xu&amp;\pd xv\\[4pt]\pd yu&amp;\pd yv\end{vmatrix}=\pd xu\pd yv-\pd xv\pd yu\]</dd></div>
+      <div><dt>formule</dt><dd>\[\iint_Df(x,y)\,\dd x\,\dd y=\iint_\Delta f(T(u,v))\,|\det J_T(u,v)|\,\dd u\,\dd v\] Même formule en dimension 3 avec le déterminant \(3\times3\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Constantes</h4>
+      <div class="tw"><table>
+        <tr><th>Coordonnees</th><th>|det J|</th><th>Élément d'intégration</th></tr>
+        <tr><td><code>POLAIRES</code></td><td>\(r\)</td><td>\(r\,\dd r\,\dd\theta\)</td></tr>
+        <tr><td><code>CYLINDRIQUES</code></td><td>\(r\)</td><td>\(r\,\dd r\,\dd\theta\,\dd z\)</td></tr>
+        <tr><td><code>SPHERIQUES</code></td><td>\(r^2\sin\varphi\)</td><td>\(r^2\sin\varphi\,\dd r\,\dd\theta\,\dd\varphi\)</td></tr>
+      </table></div>
+    </div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double appliquer(f, D, T)</div>
+        <ol><li>Choisir \(T\) d'après la forme de \(D\) avec <a data-p="3" href="#Coordonnees">Coordonnees.choisir()</a>.</li>
+        <li>Traduire \(D\) en bornes sur les nouvelles variables : c'est \(\Delta\).</li>
+        <li>Remplacer \(x,y\) dans \(f\).</li>
+        <li>Multiplier par \(|\det J_T|\). Ne pas oublier la valeur absolue.</li>
+        <li>Intégrer sur \(\Delta\), souvent un rectangle, donc séparable.</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\iint x^4\) sur le disque de rayon 3 : \(\int_0^3r^5\,\dd r\int_0^{2\pi}\cos^4\theta\,\dd\theta=\frac{729}6\cdot\frac{3\pi}4=\frac{729\pi}8\).</div></div>
+    </div>
+    <div class="cmp"><h4>Import</h4><div class="rels"><a data-p="1" href="#FonctionVectorielle">ch1.FonctionVectorielle.jacobien</a><a data-p="3" href="#Coordonnees">ch3.Coordonnees</a></div></div>
+  </article>
+
+  <article class="cls" id="IntegraleTriple">
+    <header><span class="st">«class»</span><span class="nm">IntegraleTriple</span> <span class="ex">extends <a href="#IntegraleDouble">IntegraleDouble</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>herite</dt><dd>Mêmes propriétés que l'intégrale double : linéarité, positivité, croissance, additivité.</dd></div>
+      <div><dt>volume</dt><dd>\(\text{Volume}(D)=\iiint_D\dd x\,\dd y\,\dd z\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double surPave(f, [a,b]×[c,d]×[e,i])</div>
+        \[\iiint_Df=\int_e^i\int_c^d\int_a^bf(x,y,z)\,\dd x\,\dd y\,\dd z\]
+        <p>Ordre libre. Séparable : \(\int_a^bg\times\int_c^dh\times\int_e^ik\).</p></div>
+      <div class="m"><div class="sig">double surDomaineQuelconque(f, D)</div>
+        <p>Pour \(D=\{a\le x\le b,\ y_1(x)\le y\le y_2(x),\ z_1(x,y)\le z\le z_2(x,y)\}\) :</p>
+        \[\iiint_Df=\int_a^b\int_{y_1(x)}^{y_2(x)}\int_{z_1(x,y)}^{z_2(x,y)}f(x,y,z)\,\dd z\,\dd y\,\dd x\]
+        <p>On intègre de l'intérieur vers l'extérieur : \(z\), puis \(y\), puis \(x\).</p></div>
+      <div class="m"><div class="sig">double parChangementDeVariables(f, D)</div>
+        <p>Cylindre, cône, paraboloïde : cylindriques. Boule, ellipsoïde : sphériques. Voir <a href="#ChangementDeVariables">ChangementDeVariables</a>.</p>
+        <div class="ex-box"><b>Exemples.</b> Volume de la boule : \(\int_0^Rr^2\,\dd r\int_0^\pi\sin\varphi\,\dd\varphi\int_0^{2\pi}\dd\theta=\frac{R^3}3\cdot2\cdot2\pi=\frac43\pi R^3\).<br>\(\iiint z^2\) sur la boule unité : \(\int_0^1r^4\,\dd r\int_0^\pi\cos^2\varphi\sin\varphi\,\dd\varphi\int_0^{2\pi}\dd\theta=\frac15\cdot\frac23\cdot2\pi=\frac{4\pi}{15}\).</div></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="6" href="#Ostrogradsky">ch6.GreenOstrogradsky</a></div></div>
+  </article>
+
+  </div>
+</section>
+
+<!-- ============ CH 5 ============ -->
+<section class="pkg" id="pkg5" data-p="5">
+  <header>
+    <h2><small>CHAPITRE 5</small>Intégrales curvilignes</h2>
+    <div class="src"><b>package</b> analyse3.ch5.curvilignes;<br><b>import</b> <a data-p="3" href="#CourbePlane">analyse3.ch3.geometrie.CourbePlane</a>; <span>// paramétrages</span><br><b>import</b> <a data-p="2" href="#ChampConservatif">analyse3.ch2.vectorielle.ChampConservatif</a>;<br><b>import</b> <a data-p="4" href="#IntegraleDouble">analyse3.ch4.integrales.IntegraleDouble</a>; <span>// Green-Riemann</span></div>
+  </header>
+  <div class="classes">
+
+  <article class="cls" id="CourbeParametree">
+    <header><span class="st">«class»</span><span class="nm">CourbeParametree</span> <span class="ex">extends <a data-p="3" href="#CourbePlane">ch3.CourbePlane</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>gamma</dt><dd>\(\gamma:[a,b]\to\R^n,\ t\mapsto(x_1(t),\dots,x_n(t))\). La courbe \(C\) est l'ensemble des points \(\gamma(t)\).</dd></div>
+      <div><dt>orientation</dt><dd>De \(\gamma(a)\) vers \(\gamma(b)\). Si le paramètre est un angle, le sens positif est le sens trigonométrique.</dd></div>
+      <div><dt>fermee</dt><dd>\(\gamma(a)=\gamma(b)\). On note alors \(\oint_C\).</dd></div>
+      <div><dt>inverse</dt><dd>\(C^-\) : la même courbe parcourue à l'envers, \(\gamma^-(t)=\gamma(a+b-t)\).</dd></div>
+    </dl></div>
+  </article>
+
+  <article class="cls" id="IntegraleCurviligne">
+    <header><span class="st">«class»</span><span class="nm">IntegraleCurviligne</span> <span class="ex">uses <a href="#CourbeParametree">CourbeParametree</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>definition</dt><dd>\[\int_C\v F\cdot\dd\v l=\int_a^b\v F(\gamma(t))\cdot\gamma'(t)\,\dd t\] En physique : la circulation de \(\v F\) le long de \(C\).</dd></div>
+      <div><dt>n = 2</dt><dd>\(\v F=(P,Q)\), \(\dd\v l=(\dd x,\dd y)\) : \[\int_CP\,\dd x+Q\,\dd y=\int_a^b\big(P(\gamma(t))\,x'(t)+Q(\gamma(t))\,y'(t)\big)\dd t\]</dd></div>
+      <div><dt>n = 3</dt><dd>\(\int_CP\,\dd x+Q\,\dd y+R\,\dd z\), avec un troisième terme \(R(\gamma(t))\,z'(t)\).</dd></div>
+      <div><dt>proprietes</dt><dd>Indépendante du paramétrage choisi. Linéaire en \(\v F\). Changer le sens change le signe : \(\int_{C^-}\v F\cdot\dd\v l=-\int_C\v F\cdot\dd\v l\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double calculDirect(F, C)</div>
+        <ol><li>Paramétrer \(C\) : \(\gamma(t)=(x(t),y(t))\), \(t\in[a,b]\), dans le bon sens. Voir <a data-p="3" href="#CourbePlane">ch3.CourbePlane</a>.</li>
+        <li>Dériver : \(\dd x=x'(t)\,\dd t\), \(\dd y=y'(t)\,\dd t\).</li>
+        <li>Remplacer \(x,y\) par \(x(t),y(t)\) dans \(P\) et \(Q\).</li>
+        <li>Calculer l'intégrale simple en \(t\).</li>
+        <li>Courbe en plusieurs morceaux (carré, demi-disque) : un paramétrage par morceau, puis additionner.</li></ol></div>
+    </div>
+    <div class="cmp"><h4>Utilisée par</h4><div class="rels"><a data-p="6" href="#Stokes">ch6.Stokes</a></div></div>
+  </article>
+
+  <article class="cls" id="GreenRiemann">
+    <header><span class="st">«interface»</span><span class="nm">GreenRiemann</span> <span class="ex">IntegraleCurviligne ⇄ <a data-p="4" href="#IntegraleDouble">ch4.IntegraleDouble</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>formule</dt><dd>\[\oint_CP\,\dd x+Q\,\dd y=\iint_\Delta\Big(\pd Qx-\pd Py\Big)\dd x\,\dd y\]</dd></div>
+      <div><dt>conditions</dt><dd>\(P,Q\) de classe \(C^1\). \(C\) fermée, délimite le domaine fermé borné \(\Delta\), orientée positivement (sens trigonométrique).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double appliquer(P, Q, C)</div>
+        <ol><li>Vérifier que \(C\) est fermée et notée dans le sens trigonométrique. Sinon, changer le signe.</li>
+        <li>Calculer \(\pd Qx-\pd Py\).</li>
+        <li>Intégrer sur l'intérieur \(\Delta\) avec <a data-p="4" href="#IntegraleDouble">ch4.IntegraleDouble</a>.</li></ol>
+        <div class="ex-box"><b>Exemples.</b> \(\oint(x^3-y)\,\dd x+(x+y)\,\dd y\) sur le cercle unité : \(\pd Qx-\pd Py=2\), donc \(2\times\text{Aire}=2\pi\).<br>\(\oint x^2\,\dd x+xy\,\dd y\) sur le bord du carré \([0,1]^2\) : \(\iint y\,\dd x\,\dd y=\frac12\).</div></div>
+      <div class="m"><div class="sig">double sensInverse(f, Δ) <i>// une intégrale double vue comme un contour</i></div>
+        <p>Pour calculer \(\iint_\Delta g\) par un contour, chercher \(P,Q\) tels que \(\pd Qx-\pd Py=g\). Avec \(g=1\) : \(\text{Aire}(\Delta)=\frac12\oint_Cx\,\dd y-y\,\dd x\) (conséquence classique, absente du poly).</p></div>
+    </div>
+  </article>
+
+  <article class="cls" id="FormeDifferentielle">
+    <header><span class="st">«class»</span><span class="nm">FormeDifferentielle</span> <span class="ex">uses <a data-p="2" href="#ChampConservatif">ch2.ChampConservatif</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>omega</dt><dd>\(\omega=P\,\dd x+Q\,\dd y\) dans \(\R^2\), \(\omega=P\,\dd x+Q\,\dd y+R\,\dd z\) dans \(\R^3\).</dd></div>
+      <div><dt>fermee</dt><dd>\(\R^2\) : dérivées croisées égales, \(\pd Qx=\pd Py\). &nbsp; \(\R^3\) : \(\rot(P,Q,R)=\v0\).</dd></div>
+      <div><dt>exacte</dt><dd>Il existe \(f\) avec \(\pd fx=P,\ \pd fy=Q\) (et \(\pd fz=R\)). Autrement dit \(\v F=(P,Q,R)=\grad f\) : le champ est conservatif.</dd></div>
+      <div><dt>lien</dt><dd>Sur un ouvert étoilé : fermée \(\iff\) exacte.</dd></div>
+      <div><dt>integrale</dt><dd>Si \(\omega\) est exacte : \[\int_{AB}\omega=f(B)-f(A)\] Le chemin ne compte pas, seuls les deux bouts comptent. Sur une courbe fermée le résultat est donc 0.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double integrer(ω, A, B)</div>
+        <ol><li>Tester « fermée » : \(\pd Qx=\pd Py\), ou \(\rot=\v0\) en 3D.</li>
+        <li>Vérifier que le domaine est étoilé : alors \(\omega\) est exacte.</li>
+        <li>Trouver \(f\) avec <a data-p="2" href="#ChampConservatif">ch2.trouverPotentiel()</a>.</li>
+        <li>Répondre \(f(B)-f(A)\).</li></ol></div>
+    </div>
+    <div class="cmp"><h4>Import</h4><div class="rels"><a data-p="2" href="#ChampConservatif">ch2.ChampConservatif</a><a data-p="1" href="#ClasseCk">ch1.ClasseCk.schwarz</a></div></div>
+  </article>
+
+  </div>
+</section>
+
+<!-- ============ CH 6 ============ -->
+<section class="pkg" id="pkg6" data-p="6">
+  <header>
+    <h2><small>CHAPITRE 6</small>Intégrales de surface</h2>
+    <div class="src"><b>package</b> analyse3.ch6.surfaces;<br><b>import</b> <a data-p="3" href="#Vecteur3D">analyse3.ch3.geometrie.Vecteur3D</a>; <span>// produit vectoriel</span><br><b>import</b> <a data-p="3" href="#Solide">analyse3.ch3.geometrie.Solide</a>; <span>// surfaces latérales</span><br><b>import</b> <a data-p="2" href="#Nabla">analyse3.ch2.vectorielle.Nabla</a>; <span>// rot, div</span><br><b>import</b> <a data-p="4" href="#IntegraleTriple">analyse3.ch4.integrales.*</a>;<br><b>import</b> <a data-p="5" href="#IntegraleCurviligne">analyse3.ch5.curvilignes.IntegraleCurviligne</a>;</div>
+  </header>
+  <div class="classes">
+
+  <article class="cls" id="SurfaceParametree">
+    <header><span class="st">«class»</span><span class="nm">SurfaceParametree</span> <span class="ex">uses <a data-p="3" href="#Solide">ch3.Solide</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>psi</dt><dd>\(\Psi:D\subset\R^2\to\R^3,\ (u,v)\mapsto(x(u,v),y(u,v),z(u,v))\), et \(S=\Psi(D)\). Deux paramètres pour une surface, trois pour un solide.</dd></div>
+      <div><dt>tangents</dt><dd>\(\v T_u=\Big(\pd xu,\pd yu,\pd zu\Big)\), \(\v T_v=\Big(\pd xv,\pd yv,\pd zv\Big)\). Non colinéaires, ils engendrent le plan tangent.</dd></div>
+      <div><dt>normal</dt><dd>\(\v T_u\wedge\v T_v\) est normal à \(S\). Normal unitaire : \(\v N=\dfrac{\v T_u\wedge\v T_v}{\|\v T_u\wedge\v T_v\|}\).</dd></div>
+      <div><dt>reguliere</dt><dd>\(\v T_u\wedge\v T_v\ne\v0\) en tout point : il existe alors une normale partout.</dd></div>
+      <div><dt>orientation</dt><dd>Choisir \(\v N\) ou \(-\v N\). On note \(S^+\) et \(S^-\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">Vecteur3D normale(Ψ)</div>
+        <ol><li>Dériver \(\Psi\) par rapport à chaque paramètre : \(\v T_u\), \(\v T_v\).</li>
+        <li>Calculer \(\v T_u\wedge\v T_v\) avec <a data-p="3" href="#Vecteur3D">ch3.produitVectoriel()</a>.</li>
+        <li>Regarder où il s'annule : régularité.</li>
+        <li>Tester en un point simple s'il pointe vers l'extérieur (sortant) ou l'intérieur (rentrant). S'il est dans le mauvais sens, prendre l'opposé.</li>
+        <li>Diviser par la norme pour obtenir \(\v N\).</li></ol></div>
+    </div>
+    <div class="cmp"><h4>Résultats à connaître</h4>
+      <div class="tw"><table>
+        <tr><th>Surface</th><th>Ψ</th><th>Tu ∧ Tv</th><th>Sens</th></tr>
+        <tr><td>Cylindre \(x^2+y^2=R^2\)</td><td>\((\theta,z)\mapsto(R\cos\theta,R\sin\theta,z)\)</td><td>\((R\cos\theta,\ R\sin\theta,\ 0)\), norme \(R\)</td><td>sortant</td></tr>
+        <tr><td>Sphère de rayon \(R\)</td><td>\((\theta,\varphi)\mapsto R(\cos\theta\sin\varphi,\ \sin\theta\sin\varphi,\ \cos\varphi)\)</td><td>\(-R\sin\varphi\ \overrightarrow{OM}\), norme \(R^2\sin\varphi\)</td><td>rentrant</td></tr>
+      </table></div>
+      <p class="warn"><b>piège</b>Pour la sphère paramétrée dans l'ordre \((\theta,\varphi)\), la normale est rentrante et nulle aux pôles \(\varphi=0,\pi\). Pour un flux sortant, changer le signe ou prendre l'ordre \((\varphi,\theta)\). Le poly fait le calcul avec \(R=2\) (cylindre) et \(R=3\) (sphère).</p>
+    </div>
+  </article>
+
+  <article class="cls" id="Flux">
+    <header><span class="st">«class»</span><span class="nm">Flux</span> <span class="ex">uses <a href="#SurfaceParametree">SurfaceParametree</a>, <a data-p="4" href="#IntegraleDouble">ch4.IntegraleDouble</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>definition</dt><dd>\[\iint_S\v F\cdot\dd\v S=\iint_D\v F(\Psi(u,v))\cdot\big(\v T_u\wedge\v T_v\big)(u,v)\,\dd u\,\dd v\] C'est le flux de \(\v F\) à travers \(S\) dans la direction \(\v T_u\wedge\v T_v\).</dd></div>
+      <div><dt>proprietes</dt><dd>Indépendant du paramétrage tant que l'orientation est conservée. Linéaire en \(\v F\). \(\iint_{S^-}\v F\cdot\dd\v S=-\iint_{S^+}\v F\cdot\dd\v S\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double calculDirect(F, S)</div>
+        <ol><li>Paramétrer \(S\) : \(\Psi(u,v)\) et son domaine \(D\).</li>
+        <li>Calculer \(\v T_u\wedge\v T_v\) et vérifier son sens.</li>
+        <li>Remplacer \(x,y,z\) dans \(\v F\) par les composantes de \(\Psi\).</li>
+        <li>Faire le produit scalaire \(\v F(\Psi)\cdot(\v T_u\wedge\v T_v)\).</li>
+        <li>Intégrer sur \(D\). Aucun Jacobien à ajouter : il est déjà dans \(\v T_u\wedge\v T_v\).</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\v F=(x,0,y)\) à travers le cylindre \(x^2+y^2=4,\ 0\le z\le3\) : \((2\cos\theta,0,2\sin\theta)\cdot(2\cos\theta,2\sin\theta,0)=4\cos^2\theta\), puis \(\int_0^3\dd z\int_0^{2\pi}4\cos^2\theta\,\dd\theta=12\pi\).</div></div>
+    </div>
+  </article>
+
+  <article class="cls" id="Stokes">
+    <header><span class="st">«interface»</span><span class="nm">Stokes</span> <span class="ex">Flux ⇄ <a data-p="5" href="#IntegraleCurviligne">ch5.IntegraleCurviligne</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>formule</dt><dd>\[\iint_S\rot\v F\cdot\dd\v S=\oint_C\v F\cdot\dd\v l\]</dd></div>
+      <div><dt>conditions</dt><dd>\(S\) régulière, orientable, de bord \(C\). \(\v F\) de classe \(C^1\). Orientations de \(S\) et \(C\) compatibles.</dd></div>
+      <div><dt>bord</dt><dd>Cylindre sans couvercles : deux cercles. Demi-sphère : un cercle. Sphère entière : pas de bord.</dd></div>
+      <div><dt>tireBouchon</dt><dd>En tournant dans le sens de parcours de \(C\), le tire-bouchon avance dans le sens de \(\v N\). Sens trigonométrique vu d'en haut : \(\v N\) vers le haut.</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double appliquer(F, S)</div>
+        <ol><li>Identifier le bord \(C\) de \(S\) et l'orienter d'après \(\v N\).</li>
+        <li>Choisir le côté le plus simple : circulation sur \(C\) (<a data-p="5" href="#IntegraleCurviligne">ch5</a>) ou flux de \(\rot\v F\) (<a href="#Flux">Flux</a>).</li>
+        <li>Pour « vérifier le théorème », calculer les deux et comparer.</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\v F=(x^2y,z^2,0)\), cône \(x^2+y^2=z^2,\ 0\le z\le1\). Bord : \(\gamma(t)=(\cos t,\sin t,1)\). \(\oint\v F\cdot\dd\v l=\int_0^{2\pi}(-\cos^2t\sin^2t+\cos t)\,\dd t=-\frac\pi4\), avec \(\v N\) vers le haut.</div></div>
+    </div>
+    <div class="cmp"><h4>Import</h4><div class="rels"><a data-p="2" href="#Nabla">ch2.Nabla.rot</a><a data-p="5" href="#GreenRiemann">ch5.GreenRiemann : le cas plan</a></div></div>
+  </article>
+
+  <article class="cls" id="Ostrogradsky">
+    <header><span class="st">«interface»</span><span class="nm">GreenOstrogradsky</span> <span class="ex">Flux ⇄ <a data-p="4" href="#IntegraleTriple">ch4.IntegraleTriple</a></span></header>
+    <div class="cmp"><h4>Attributs</h4><dl>
+      <div><dt>formule</dt><dd>\[\iint_S\v F\cdot\dd\v S=\iiint_\Omega\Div\v F\ \dd x\,\dd y\,\dd z\]</dd></div>
+      <div><dt>conditions</dt><dd>\(\Omega\) fermé borné de \(\R^3\), de bord \(S\) régulière, normale vers l'extérieur. \(\v F\) de classe \(C^1\).</dd></div>
+      <div><dt>bord</dt><dd>Boule : la sphère. Cylindre plein : trois surfaces, le côté et les deux disques \(z=0\), \(z=3\).</dd></div>
+    </dl></div>
+    <div class="cmp"><h4>Méthodes</h4>
+      <div class="m"><div class="sig">double appliquer(F, Ω)</div>
+        <ol><li>Vérifier que \(S\) est fermée (elle entoure un volume \(\Omega\)) et que le flux demandé est sortant.</li>
+        <li>Calculer \(\Div\v F\) avec <a data-p="2" href="#Nabla">ch2.div()</a>.</li>
+        <li>Intégrer sur \(\Omega\) avec <a data-p="4" href="#IntegraleTriple">ch4.IntegraleTriple</a>.</li></ol>
+        <div class="ex-box"><b>Exemple.</b> \(\v F=(xy,y,z)\), boule unité : \(\Div\v F=y+2\). \(\iiint y=0\) par symétrie, reste \(2\times\frac43\pi=\frac{8\pi}3\).</div>
+        <p class="warn"><b>piège</b>Si la surface n'est pas fermée (cylindre sans couvercles), il faut ajouter puis retrancher le flux à travers les couvercles.</p></div>
+    </div>
+    <div class="cmp"><h4>Import</h4><div class="rels"><a data-p="2" href="#Nabla">ch2.Nabla.div</a><a data-p="3" href="#Solide">ch3.Solide</a></div></div>
+  </article>
+
+  </div>
+</section>
+
+<!-- ============ FORMULAIRE ============ -->
+<section class="pkg" id="formulaire" data-p="0">
+  <header>
+    <h2><small>BOÎTE À OUTILS</small>Formulaire</h2>
+    <div class="src"><b>package</b> analyse3.util; <span>// tout est static : pas de cours ici, seulement ce qu'on appelle au milieu d'un calcul</span></div>
+  </header>
+  <div class="classes">
+  <article class="cls fm" id="TrigoIdentites"><header><span class="st">«static»</span><span class="nm">Trigo.identites</span> <span class="ex"></span></header><div class="cmp"><h4>Fondamentales</h4><dl><div><dt>\(\cos^2a+\sin^2a\)</dt><dd>\(1\)</dd></div><div><dt>\(\tan a\)</dt><dd>\(\dfrac{\sin a}{\cos a}\)</dd></div><div><dt>\(1+\tan^2a\)</dt><dd>\(\dfrac1{\cos^2a}\)</dd></div><div><dt>\(e^{ia}\)</dt><dd>\(\cos a+i\sin a\)</dd></div><div><dt>\(\cos a\)</dt><dd>\(\dfrac{e^{ia}+e^{-ia}}2\)</dd></div><div><dt>\(\sin a\)</dt><dd>\(\dfrac{e^{ia}-e^{-ia}}{2i}\)</dd></div></dl></div><div class="cmp"><h4>Addition</h4><dl><div><dt>\(\cos(a+b)\)</dt><dd>\(\cos a\cos b-\sin a\sin b\)</dd></div><div><dt>\(\cos(a-b)\)</dt><dd>\(\cos a\cos b+\sin a\sin b\)</dd></div><div><dt>\(\sin(a+b)\)</dt><dd>\(\sin a\cos b+\cos a\sin b\)</dd></div><div><dt>\(\sin(a-b)\)</dt><dd>\(\sin a\cos b-\cos a\sin b\)</dd></div><div><dt>\(\tan(a+b)\)</dt><dd>\(\dfrac{\tan a+\tan b}{1-\tan a\tan b}\)</dd></div></dl></div><div class="cmp"><h4>Duplication</h4><dl><div><dt>\(\cos 2a\)</dt><dd>\(\cos^2a-\sin^2a=2\cos^2a-1=1-2\sin^2a\)</dd></div><div><dt>\(\sin 2a\)</dt><dd>\(2\sin a\cos a\)</dd></div><div><dt>\(\tan 2a\)</dt><dd>\(\dfrac{2\tan a}{1-\tan^2a}\)</dd></div></dl></div></article>
+  <article class="cls fm" id="TrigoLinearisation"><header><span class="st">«static»</span><span class="nm">Trigo.linearisation</span> <span class="ex"></span></header><div class="cmp"><h4>Pour intégrer une puissance paire</h4><dl><div><dt>\(\cos^2a\)</dt><dd>\(\dfrac{1+\cos 2a}2\)</dd></div><div><dt>\(\sin^2a\)</dt><dd>\(\dfrac{1-\cos 2a}2\)</dd></div><div><dt>\(\sin a\cos a\)</dt><dd>\(\dfrac{\sin 2a}2\)</dd></div><div><dt>\(\sin^2a\cos^2a\)</dt><dd>\(\dfrac{1-\cos 4a}8\)</dd></div><div><dt>\(\cos^4a\)</dt><dd>\(\dfrac{3+4\cos 2a+\cos 4a}8\)</dd></div><div><dt>\(\sin^4a\)</dt><dd>\(\dfrac{3-4\cos 2a+\cos 4a}8\)</dd></div><div><dt>\(\cos^3a\)</dt><dd>\(\dfrac{3\cos a+\cos 3a}4\)</dd></div><div><dt>\(\sin^3a\)</dt><dd>\(\dfrac{3\sin a-\sin 3a}4\)</dd></div></dl></div><div class="cmp"><h4>Produit vers somme</h4><dl><div><dt>\(\cos a\cos b\)</dt><dd>\(\tfrac12\big[\cos(a-b)+\cos(a+b)\big]\)</dd></div><div><dt>\(\sin a\sin b\)</dt><dd>\(\tfrac12\big[\cos(a-b)-\cos(a+b)\big]\)</dd></div><div><dt>\(\sin a\cos b\)</dt><dd>\(\tfrac12\big[\sin(a+b)+\sin(a-b)\big]\)</dd></div></dl></div><div class="cmp"><h4>Somme vers produit</h4><dl><div><dt>\(\cos p+\cos q\)</dt><dd>\(2\cos\tfrac{p+q}2\cos\tfrac{p-q}2\)</dd></div><div><dt>\(\cos p-\cos q\)</dt><dd>\(-2\sin\tfrac{p+q}2\sin\tfrac{p-q}2\)</dd></div><div><dt>\(\sin p+\sin q\)</dt><dd>\(2\sin\tfrac{p+q}2\cos\tfrac{p-q}2\)</dd></div><div><dt>\(\sin p-\sin q\)</dt><dd>\(2\cos\tfrac{p+q}2\sin\tfrac{p-q}2\)</dd></div></dl></div></article>
+  <article class="cls fm" id="TrigoSymetries"><header><span class="st">«static»</span><span class="nm">Trigo.symetries</span> <span class="ex"></span></header><div class="cmp"><h4>Valeurs remarquables</h4><div class="tw"><table><tr><th>x</th><th>sin x</th><th>cos x</th><th>tan x</th></tr><tr><td>\(0\)</td><td class="q">\(0\)</td><td class="q">\(1\)</td><td class="q">\(0\)</td></tr><tr><td>\(\tfrac\pi6\)</td><td class="q">\(\tfrac12\)</td><td class="q">\(\tfrac{\sqrt3}2\)</td><td class="q">\(\tfrac1{\sqrt3}\)</td></tr><tr><td>\(\tfrac\pi4\)</td><td class="q">\(\tfrac{\sqrt2}2\)</td><td class="q">\(\tfrac{\sqrt2}2\)</td><td class="q">\(1\)</td></tr><tr><td>\(\tfrac\pi3\)</td><td class="q">\(\tfrac{\sqrt3}2\)</td><td class="q">\(\tfrac12\)</td><td class="q">\(\sqrt3\)</td></tr><tr><td>\(\tfrac\pi2\)</td><td class="q">\(1\)</td><td class="q">\(0\)</td><td class="q">\(\text{non définie}\)</td></tr><tr><td>\(\pi\)</td><td class="q">\(0\)</td><td class="q">\(-1\)</td><td class="q">\(0\)</td></tr><tr><td>\(\tfrac{3\pi}2\)</td><td class="q">\(-1\)</td><td class="q">\(0\)</td><td class="q">\(\text{non définie}\)</td></tr></table></div></div><div class="cmp"><h4>Angles associés</h4><dl><div><dt>\(\cos(-x)\)</dt><dd>\(\cos x\)</dd></div><div><dt>\(\sin(-x)\)</dt><dd>\(-\sin x\)</dd></div><div><dt>\(\cos(\pi-x)\)</dt><dd>\(-\cos x\)</dd></div><div><dt>\(\sin(\pi-x)\)</dt><dd>\(\sin x\)</dd></div><div><dt>\(\cos(\pi+x)\)</dt><dd>\(-\cos x\)</dd></div><div><dt>\(\sin(\pi+x)\)</dt><dd>\(-\sin x\)</dd></div><div><dt>\(\cos(\tfrac\pi2-x)\)</dt><dd>\(\sin x\)</dd></div><div><dt>\(\sin(\tfrac\pi2-x)\)</dt><dd>\(\cos x\)</dd></div><div><dt>\(\cos(\tfrac\pi2+x)\)</dt><dd>\(-\sin x\)</dd></div><div><dt>\(\sin(\tfrac\pi2+x)\)</dt><dd>\(\cos x\)</dd></div></dl></div><div class="cmp"><h4>Dérivées</h4><dl><div><dt>\((\cos x)'\)</dt><dd>\(-\sin x\)</dd></div><div><dt>\((\sin x)'\)</dt><dd>\(\cos x\)</dd></div><div><dt>\((\tan x)'\)</dt><dd>\(1+\tan^2x=\dfrac1{\cos^2x}\)</dd></div><div><dt>\((\cos(ax+b))'\)</dt><dd>\(-a\sin(ax+b)\)</dd></div><div><dt>\((\sin(ax+b))'\)</dt><dd>\(a\cos(ax+b)\)</dd></div></dl></div></article>
+  <article class="cls fm" id="IntegralesTrigo"><header><span class="st">«static»</span><span class="nm">IntegralesTrigo</span> <span class="ex">uses <a href="#TrigoLinearisation">Trigo.linearisation</a></span></header><div class="cmp"><h4>Sur un tour complet, θ de 0 à 2π</h4><dl><div><dt>\(\int_0^{2\pi}\cos\theta\,\dd\theta\)</dt><dd>\(0\ \text{ (pareil pour }\sin\theta)\)</dd></div><div><dt>\(\int_0^{2\pi}\cos^2\theta\,\dd\theta\)</dt><dd>\(\pi\ \text{ (pareil pour }\sin^2\theta)\)</dd></div><div><dt>\(\int_0^{2\pi}\sin\theta\cos\theta\,\dd\theta\)</dt><dd>\(0\)</dd></div><div><dt>\(\int_0^{2\pi}\cos^4\theta\,\dd\theta\)</dt><dd>\(\dfrac{3\pi}4\ \text{ (pareil pour }\sin^4\theta)\)</dd></div><div><dt>\(\int_0^{2\pi}\sin^2\theta\cos^2\theta\,\dd\theta\)</dt><dd>\(\dfrac\pi4\)</dd></div><div><dt>\(\int_0^{2\pi}\cos^{n}\theta\,\dd\theta,\ n\text{ impair}\)</dt><dd>\(0\ \text{ (pareil pour }\sin^n\theta)\)</dd></div></dl></div><div class="cmp"><h4>Sur un demi-tour, φ de 0 à π (sphériques)</h4><dl><div><dt>\(\int_0^{\pi}\sin\varphi\,\dd\varphi\)</dt><dd>\(2\)</dd></div><div><dt>\(\int_0^{\pi}\sin^2\varphi\,\dd\varphi\)</dt><dd>\(\dfrac\pi2\)</dd></div><div><dt>\(\int_0^{\pi}\sin^3\varphi\,\dd\varphi\)</dt><dd>\(\dfrac43\)</dd></div><div><dt>\(\int_0^{\pi}\cos^2\varphi\sin\varphi\,\dd\varphi\)</dt><dd>\(\dfrac23\)</dd></div><div><dt>\(\int_0^{\pi}\cos\varphi\sin\varphi\,\dd\varphi\)</dt><dd>\(0\)</dd></div></dl></div><div class="cmp"><h4>Sur un quart de tour, 0 à π/2</h4><dl><div><dt>\(\int_0^{\pi/2}\cos^2\theta\,\dd\theta\)</dt><dd>\(\dfrac\pi4\ \text{ (pareil pour }\sin^2\theta)\)</dd></div><div><dt>\(\int_0^{\pi/2}\sin\theta\cos\theta\,\dd\theta\)</dt><dd>\(\dfrac12\)</dd></div><div><dt>\(\int_0^{\pi/2}\cos\theta\,\dd\theta\)</dt><dd>\(1\ \text{ (pareil pour }\sin\theta)\)</dd></div></dl></div><div class="cmp"><h4>Méthodes</h4><div class="m"><div class="sig">double integrer(cos^p · sin^q)</div><ol><li>Une puissance impaire : garder un facteur pour le \(\dd u\). Exemple \(\cos^2\varphi\sin\varphi\) : poser \(u=\cos\varphi\), \(\dd u=-\sin\varphi\,\dd\varphi\).</li><li>Deux puissances paires : linéariser avec <a href="#TrigoLinearisation">Trigo.linearisation</a>.</li><li>Sur un tour complet, tout \(\cos(k\theta)\) ou \(\sin(k\theta)\) avec \(k\ne0\) s\'intègre à 0 : il ne reste que la constante.</li></ol></div></div></article>
+  <article class="cls fm" id="Primitives"><header><span class="st">«static»</span><span class="nm">Primitives</span> <span class="ex"></span></header><div class="cmp"><h4>f(x) vers une primitive F(x)</h4><dl><div><dt>\(x^n,\ n\ne-1\)</dt><dd>\(\dfrac{x^{n+1}}{n+1}\)</dd></div><div><dt>\(\dfrac1x\)</dt><dd>\(\ln|x|\)</dd></div><div><dt>\(e^{ax}\)</dt><dd>\(\dfrac{e^{ax}}a\)</dd></div><div><dt>\(\cos(ax)\)</dt><dd>\(\dfrac{\sin(ax)}a\)</dd></div><div><dt>\(\sin(ax)\)</dt><dd>\(-\dfrac{\cos(ax)}a\)</dd></div><div><dt>\(\dfrac1{\cos^2x}\)</dt><dd>\(\tan x\)</dd></div><div><dt>\(\tan x\)</dt><dd>\(-\ln|\cos x|\)</dd></div><div><dt>\(\dfrac1{1+x^2}\)</dt><dd>\(\arctan x\)</dd></div><div><dt>\(\dfrac1{\sqrt{1-x^2}}\)</dt><dd>\(\arcsin x\)</dd></div><div><dt>\(u'\,u^n\)</dt><dd>\(\dfrac{u^{n+1}}{n+1}\)</dd></div><div><dt>\(\dfrac{u'}u\)</dt><dd>\(\ln|u|\)</dd></div><div><dt>\(u'\,e^u\)</dt><dd>\(e^u\)</dd></div><div><dt>\(\dfrac{u'}{2\sqrt u}\)</dt><dd>\(\sqrt u\)</dd></div></dl></div><div class="cmp"><h4>Outils</h4><dl><div><dt>\(\int_a^bu\,v'\)</dt><dd>\(\big[uv\big]_a^b-\int_a^bu'\,v\)</dd></div><div><dt>\(\int_0^Rr^n\,\dd r\)</dt><dd>\(\dfrac{R^{n+1}}{n+1}\)</dd></div><div><dt>\(\int_{-a}^af,\ f\text{ impaire}\)</dt><dd>\(0\)</dd></div></dl></div></article>
+  <article class="cls fm" id="DL"><header><span class="st">«static»</span><span class="nm">DL <span class="ex">en 0, pour les limites du ch1</span></span> <span class="ex"></span></header><div class="cmp"><h4>Développements limités usuels</h4><dl><div><dt>\(e^u\)</dt><dd>\(1+u+\dfrac{u^2}2+\dfrac{u^3}6+o(u^3)\)</dd></div><div><dt>\(\sin u\)</dt><dd>\(u-\dfrac{u^3}6+o(u^3)\)</dd></div><div><dt>\(\cos u\)</dt><dd>\(1-\dfrac{u^2}2+\dfrac{u^4}{24}+o(u^4)\)</dd></div><div><dt>\(\tan u\)</dt><dd>\(u+\dfrac{u^3}3+o(u^3)\)</dd></div><div><dt>\(\ln(1+u)\)</dt><dd>\(u-\dfrac{u^2}2+\dfrac{u^3}3+o(u^3)\)</dd></div><div><dt>\(\dfrac1{1-u}\)</dt><dd>\(1+u+u^2+o(u^2)\)</dd></div><div><dt>\(\dfrac1{1+u}\)</dt><dd>\(1-u+u^2+o(u^2)\)</dd></div><div><dt>\((1+u)^\alpha\)</dt><dd>\(1+\alpha u+\dfrac{\alpha(\alpha-1)}2u^2+o(u^2)\)</dd></div><div><dt>\(\sqrt{1+u}\)</dt><dd>\(1+\dfrac u2-\dfrac{u^2}8+o(u^2)\)</dd></div></dl></div></article>
+  </div>
+</section>
+
+<!-- ============ EXCEPTIONS ============ -->
+<section class="blk" id="exceptions" style="scroll-margin-top:8rem">
+  <h2 class="sec">Exceptions</h2>
+  <p class="sub">Les erreurs qui coûtent des points, par chapitre. <code>throw</code> décrit l'erreur, <code>catch</code> dit comment la rattraper. Le nom renvoie à la classe concernée.</p>
+  <div class="grp" data-p="1"><h3 class="gh">ch1.fonctions</h3><div class="links"><div class="lk xc" data-p="1"><div class="ft"><a href="#Limite">ch1.CheminsInsuffisantsException</a></div><p><b>throw</b> Conclure que la limite existe parce que les trois directions usuelles donnent la même valeur.</p><p><b>catch</b> Trois chemins ne prouvent rien. Il faut une majoration, les polaires ou un DL.</p></div><div class="lk xc" data-p="1"><div class="ft"><a href="#Limite">ch1.ThetaOublieException</a></div><p><b>throw</b> En polaires, faire tendre \(r\to0\) sans regarder si le reste est borné en \(\theta\).</p><p><b>catch</b> Majorer par une fonction de \(r\) seul. Si le résultat dépend de \(\theta\), il n'y a pas de limite.</p></div><div class="lk xc" data-p="1"><div class="ft"><a href="#DeriveePartielle">ch1.DeriveeAuRaccordException</a></div><p><b>throw</b> Dériver la formule « ailleurs » pour obtenir la dérivée partielle au point de raccord.</p><p><b>catch</b> Au point de raccord, revenir au taux d'accroissement \(\frac{f(x_0+h,y_0)-f(x_0,y_0)}h\).</p></div><div class="lk xc" data-p="1"><div class="ft"><a href="#ClasseCk">ch1.SchwarzSansC2Exception</a></div><p><b>throw</b> Échanger \(\pd{^2f}{x\partial y}\) et \(\pd{^2f}{y\partial x}\) sans hypothèse.</p><p><b>catch</b> Vérifier que \(f\) est de classe \(C^2\) : polynôme, fraction rationnelle sur son domaine.</p></div></div></div>
+  <div class="grp" data-p="2"><h3 class="gh">ch2.vectorielle</h3><div class="links"><div class="lk xc" data-p="2"><div class="ft"><a href="#Nabla">ch2.TypeMismatchException</a></div><p><b>throw</b> Prendre la divergence d'un champ scalaire ou le gradient d'un champ de vecteurs.</p><p><b>catch</b> Lire les signatures : grad prend un scalaire, div et rot prennent un vecteur. div rend un scalaire.</p></div><div class="lk xc" data-p="2"><div class="ft"><a href="#Nabla">ch2.SigneRotException</a></div><p><b>throw</b> Se tromper de signe sur la 2e composante du rotationnel.</p><p><b>catch</b> Elle vaut \(\pd{f_x}z-\pd{f_z}x\). Poser le produit vectoriel \(\v\nabla\wedge\v F\) en colonnes plutôt que de réciter.</p></div><div class="lk xc" data-p="2"><div class="ft"><a href="#ChampConservatif">ch2.DomaineNonEtoileException</a></div><p><b>throw</b> Conclure « conservatif » de \(\rot\v F=\v0\) sur un domaine troué ou en plusieurs morceaux.</p><p><b>catch</b> Le théorème de primitivation exige un ouvert étoilé. L'écrire dans la rédaction.</p></div></div></div>
+  <div class="grp" data-p="3"><h3 class="gh">ch3.geometrie</h3><div class="links"><div class="lk xc" data-p="3"><div class="ft"><a href="#Vecteur3D">ch3.OrdreProduitVectorielException</a></div><p><b>throw</b> Calculer \(\v v\wedge\v u\) au lieu de \(\v u\wedge\v v\).</p><p><b>catch</b> \(\v u\wedge\v v=-\v v\wedge\v u\) : l'ordre fixe le sens de la normale.</p></div><div class="lk xc" data-p="3"><div class="ft"><a href="#Solide">ch3.SurfaceOuSolideException</a></div><p><b>throw</b> Confondre \(x^2+y^2=R^2\) (surface, 2 paramètres) et \(x^2+y^2\le R^2\) (solide, 3 paramètres).</p><p><b>catch</b> Égalité : le rayon est fixé. Inégalité : \(r\) varie de 0 à \(R\).</p></div><div class="lk xc" data-p="3"><div class="ft"><a href="#Coordonnees">ch3.AnglePhiException</a></div><p><b>throw</b> Faire varier \(\varphi\) sur \([0,2\pi]\) en sphériques.</p><p><b>catch</b> \(\varphi\in[0,\pi]\) part de l'axe \((Oz)\). C'est \(\theta\) qui fait le tour : \([0,2\pi]\).</p></div></div></div>
+  <div class="grp" data-p="4"><h3 class="gh">ch4.integrales</h3><div class="links"><div class="lk xc" data-p="4"><div class="ft"><a href="#ChangementDeVariables">ch4.JacobienOublieException</a></div><p><b>throw</b> Écrire \(\dd x\,\dd y=\dd r\,\dd\theta\).</p><p><b>catch</b> \(r\) en polaires et cylindriques, \(r^2\sin\varphi\) en sphériques.</p></div><div class="lk xc" data-p="4"><div class="ft"><a href="#IntegraleDouble">ch4.BornesVariablesException</a></div><p><b>throw</b> Mettre à l'extérieur une borne qui dépend d'une autre variable.</p><p><b>catch</b> Bornes variables à l'intérieur, constantes à l'extérieur. Le résultat final est un nombre.</p></div><div class="lk xc" data-p="4"><div class="ft"><a href="#IntegraleDouble">ch4.SeparationAbusiveException</a></div><p><b>throw</b> Écrire \(\iint g(x)h(y)=\int g\times\int h\) sur un domaine qui n'est pas un rectangle.</p><p><b>catch</b> La séparation exige des bornes toutes constantes, dans les variables utilisées.</p></div><div class="lk xc" data-p="4"><div class="ft"><a href="#ChangementDeVariables">ch4.DomaineNonTraduitException</a></div><p><b>throw</b> Changer de variables dans \(f\) mais garder les anciennes bornes.</p><p><b>catch</b> Réécrire le domaine dans les nouvelles variables avant d'intégrer.</p></div></div></div>
+  <div class="grp" data-p="5"><h3 class="gh">ch5.curvilignes</h3><div class="links"><div class="lk xc" data-p="5"><div class="ft"><a href="#IntegraleCurviligne">ch5.GammaPrimeOublieException</a></div><p><b>throw</b> Remplacer \(x,y\) par \(x(t),y(t)\) mais laisser \(\dd x,\dd y\) tels quels.</p><p><b>catch</b> \(\dd x=x'(t)\,\dd t\) et \(\dd y=y'(t)\,\dd t\).</p></div><div class="lk xc" data-p="5"><div class="ft"><a href="#CourbeParametree">ch5.SensDeParcoursException</a></div><p><b>throw</b> Paramétrer la courbe dans le sens horaire alors que l'énoncé dit « sens trigonométrique ».</p><p><b>catch</b> Vérifier \(\gamma(a)\) et \(\gamma(b)\). À l'envers, le résultat change de signe.</p></div><div class="lk xc" data-p="5"><div class="ft"><a href="#GreenRiemann">ch5.CourbeNonFermeeException</a></div><p><b>throw</b> Appliquer Green-Riemann à un arc ouvert.</p><p><b>catch</b> Fermer la courbe avec un segment, appliquer la formule, puis retrancher l'intégrale sur le segment ajouté.</p></div><div class="lk xc" data-p="5"><div class="ft"><a href="#GreenRiemann">ch5.SigneGreenException</a></div><p><b>throw</b> Écrire \(\pd Py-\pd Qx\).</p><p><b>catch</b> C'est \(\pd Qx-\pd Py\) : le coefficient de \(\dd y\) dérivé en \(x\), en premier.</p></div></div></div>
+  <div class="grp" data-p="6"><h3 class="gh">ch6.surfaces</h3><div class="links"><div class="lk xc" data-p="6"><div class="ft"><a href="#SurfaceParametree">ch6.NormaleRentranteException</a></div><p><b>throw</b> Calculer un flux « sortant » avec un \(\v T_u\wedge\v T_v\) qui pointe vers l'intérieur.</p><p><b>catch</b> Tester en un point. Sphère en \((\theta,\varphi)\) : rentrant, donc changer le signe.</p></div><div class="lk xc" data-p="6"><div class="ft"><a href="#Flux">ch6.JacobienEnTropException</a></div><p><b>throw</b> Multiplier par \(r\) ou \(r^2\sin\varphi\) dans une intégrale de surface.</p><p><b>catch</b> Rien à ajouter : le facteur est déjà dans \(\v T_u\wedge\v T_v\).</p></div><div class="lk xc" data-p="6"><div class="ft"><a href="#Ostrogradsky">ch6.SurfaceOuverteException</a></div><p><b>throw</b> Appliquer Green-Ostrogradsky à un cylindre sans ses couvercles.</p><p><b>catch</b> La surface doit enfermer un volume. Ajouter les couvercles, puis retrancher leur flux.</p></div><div class="lk xc" data-p="6"><div class="ft"><a href="#Stokes">ch6.OrientationBordException</a></div><p><b>throw</b> Appliquer Stokes avec un bord parcouru dans le mauvais sens.</p><p><b>catch</b> Règle du tire-bouchon : \(\v N\) vers le haut va avec le sens trigonométrique vu d'en haut.</p></div></div></div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section class="blk" id="quiz" style="scroll-margin-top:8rem">
+  <h2 class="sec">Quiz</h2>
+  <p class="sub"><code>class Quiz</code> : 56 questions à choix multiples, huit par chapitre. Une seule bonne réponse sur quatre. L'ordre des questions et des réponses change à chaque partie, et ton meilleur score par chapitre est gardé.</p>
+  <div class="qtabs"><button type="button" class="qtab" data-p="1" data-s="1"><b>ch1.fonctions</b><span class="best"></span></button><button type="button" class="qtab" data-p="2" data-s="2"><b>ch2.vectorielle</b><span class="best"></span></button><button type="button" class="qtab" data-p="3" data-s="3"><b>ch3.geometrie</b><span class="best"></span></button><button type="button" class="qtab" data-p="4" data-s="4"><b>ch4.integrales</b><span class="best"></span></button><button type="button" class="qtab" data-p="5" data-s="5"><b>ch5.curvilignes</b><span class="best"></span></button><button type="button" class="qtab" data-p="6" data-s="6"><b>ch6.surfaces</b><span class="best"></span></button><button type="button" class="qtab" data-p="0" data-s="0"><b>util.formulaire</b><span class="best"></span></button><button type="button" class="qtab all" data-s="all"><b>tout mélangé</b><span class="best"></span></button></div>
+  <div class="qstage" id="qstage">
+    <p class="qhint" id="qhint">Choisis un chapitre pour lancer une partie.</p>
+    <div class="qhead off" id="qhead"><span id="qprog"></span><span id="qscore"></span></div>
+    <div class="qq off" data-p="1"><p class="qt">En \((0,0)\), on trouve \(f(x,0)\to0\), \(f(0,y)\to0\) et \(f(x,x)\to0\). Que peut-on conclure ?</p><div class="qo"><button type="button" class="opt" data-ok="1">Rien encore : il faut une preuve (polaires, majoration ou DL)</button><button type="button" class="opt">La limite existe et vaut 0</button><button type="button" class="opt">La limite n'existe pas</button><button type="button" class="opt">\(f\) est continue en \((0,0)\)</button></div><p class="qe off"><b class="vd"></b> Trois chemins qui donnent la même valeur ne prouvent rien : un quatrième chemin pourrait donner autre chose. <a href="#Limite">Limite.existe()</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">\(\lim\limits_{(x,y)\to(0,0)}\dfrac{xy}{x^2+y^2}\) :</p><div class="qo"><button type="button" class="opt" data-ok="1">n'existe pas</button><button type="button" class="opt">vaut \(0\)</button><button type="button" class="opt">vaut \(\frac12\)</button><button type="button" class="opt">vaut \(1\)</button></div><p class="qe off"><b class="vd"></b> \(f(x,0)=0\) mais \(f(x,x)=\frac12\) : deux chemins, deux valeurs. <a href="#Limite">Limite.existe()</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">\(\pd{}{x}\big(x^3-3x^2y^2+y\big)=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(3x^2-6xy^2\)</button><button type="button" class="opt">\(3x^2-6x^2y\)</button><button type="button" class="opt">\(3x^2-6xy^2+1\)</button><button type="button" class="opt">\(-6x^2y+1\)</button></div><p class="qe off"><b class="vd"></b> On dérive en \(x\) : \(y\) est une constante, donc le terme \(+y\) disparaît. <a href="#DeriveePartielle">DeriveePartielle.deriver()</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">Le théorème de Schwarz \(\pd{^2f}{x\partial y}=\pd{^2f}{y\partial x}\) demande que \(f\) soit :</p><div class="qo"><button type="button" class="opt" data-ok="1">de classe \(C^2\)</button><button type="button" class="opt">continue</button><button type="button" class="opt">de classe \(C^1\)</button><button type="button" class="opt">quelconque, c'est toujours vrai</button></div><p class="qe off"><b class="vd"></b> L'échange des dérivées croisées n'est garanti que pour une fonction \(C^2\). <a href="#ClasseCk">ClasseCk.schwarz</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">Pour \(f:\R^3\to\R^2\), la matrice Jacobienne a :</p><div class="qo"><button type="button" class="opt" data-ok="1">2 lignes et 3 colonnes</button><button type="button" class="opt">3 lignes et 2 colonnes</button><button type="button" class="opt">3 lignes et 3 colonnes</button><button type="button" class="opt">2 lignes et 2 colonnes</button></div><p class="qe off"><b class="vd"></b> Une ligne par composante (2), une colonne par variable (3). <a href="#FonctionVectorielle">FonctionVectorielle.jacobienne</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">En polaires, \(\dfrac{x^2y}{x^2+y^2}\) devient :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(r\cos^2\theta\sin\theta\)</button><button type="button" class="opt">\(r^2\cos^2\theta\sin\theta\)</button><button type="button" class="opt">\(\cos^2\theta\sin\theta\)</button><button type="button" class="opt">\(r^3\cos^2\theta\sin\theta\)</button></div><p class="qe off"><b class="vd"></b> Numérateur \(r^3\cos^2\theta\sin\theta\), dénominateur \(r^2\). <a href="#Limite">Limite.parPolaires()</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">Pour \(f(x,y)=x^2+y^2\) et \(k>0\), la courbe de niveau \(N_k\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">un cercle de rayon \(\sqrt k\)</button><button type="button" class="opt">un cercle de rayon \(k\)</button><button type="button" class="opt">une droite</button><button type="button" class="opt">une parabole</button></div><p class="qe off"><b class="vd"></b> \(x^2+y^2=k\) est le cercle de centre \(O\) et de rayon \(\sqrt k\). <a href="#FonctionReelle">FonctionReelle.courbeDeNiveau</a></p></div>
+    <div class="qq off" data-p="1"><p class="qt">Le domaine de définition de \(\dfrac{xy}{x^2+y^4}\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\R^2\) privé de \((0,0)\)</button><button type="button" class="opt">\(\R^2\) tout entier</button><button type="button" class="opt">\(\R^2\) privé des droites \(y=x\) et \(y=-x\)</button><button type="button" class="opt">\(\R^2\) privé de l'axe \(y=0\)</button></div><p class="qe off"><b class="vd"></b> \(x^2+y^4=0\) seulement si \(x=0\) et \(y=0\). <a href="#FonctionReelle">FonctionReelle.domaineDeDefinition()</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">La divergence prend en entrée et rend en sortie :</p><div class="qo"><button type="button" class="opt" data-ok="1">un champ de vecteurs, et rend un champ scalaire</button><button type="button" class="opt">un champ scalaire, et rend un champ de vecteurs</button><button type="button" class="opt">un champ de vecteurs, et rend un champ de vecteurs</button><button type="button" class="opt">un champ scalaire, et rend un champ scalaire</button></div><p class="qe off"><b class="vd"></b> grad : scalaire vers vecteur. div : vecteur vers scalaire. rot : vecteur vers vecteur. <a href="#Nabla">Nabla.div()</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">\(\rot(\grad f)=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\v0\)</button><button type="button" class="opt">\(\Delta f\)</button><button type="button" class="opt">\(\grad f\)</button><button type="button" class="opt">cela dépend de \(f\)</button></div><p class="qe off"><b class="vd"></b> Le rotationnel d'un gradient est toujours nul (conséquence de Schwarz). <a href="#Proprietes">ProprietesOperateurs.composition</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">\(\Div(\rot\v F)=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(0\)</button><button type="button" class="opt">\(\v\Delta\v F\)</button><button type="button" class="opt">\(\Div\v F\)</button><button type="button" class="opt">cela dépend de \(\v F\)</button></div><p class="qe off"><b class="vd"></b> La divergence d'un rotationnel est toujours nulle. <a href="#Proprietes">ProprietesOperateurs.composition</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">Le laplacien \(\Delta f\) est égal à :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\Div(\grad f)\)</button><button type="button" class="opt">\(\grad(\Div f)\)</button><button type="button" class="opt">\(\rot(\grad f)\)</button><button type="button" class="opt">\(\Div(\rot f)\)</button></div><p class="qe off"><b class="vd"></b> \(\Delta f=\Div(\grad f)\). Les autres n'ont pas de sens ou sont nuls. <a href="#Proprietes">ProprietesOperateurs.composition</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">Le gradient de \(f(x,y,z)=xz+y^2\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\((z,\ 2y,\ x)\)</button><button type="button" class="opt">\((x,\ 2y,\ z)\)</button><button type="button" class="opt">\((z,\ 2y,\ 0)\)</button><button type="button" class="opt">\(z+2y+x\)</button></div><p class="qe off"><b class="vd"></b> \(\pd fx=z\), \(\pd fy=2y\), \(\pd fz=x\). Un gradient est un vecteur. <a href="#Nabla">Nabla.grad()</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">La divergence de \(\v F=(x+y^2,\ yz+2,\ ze^x)\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(1+z+e^x\)</button><button type="button" class="opt">\(1+y+e^x\)</button><button type="button" class="opt">\((1,\ z,\ e^x)\)</button><button type="button" class="opt">\(1+z+ze^x\)</button></div><p class="qe off"><b class="vd"></b> \(\pd{}x(x+y^2)=1\), \(\pd{}y(yz+2)=z\), \(\pd{}z(ze^x)=e^x\). Une divergence est un nombre. <a href="#Nabla">Nabla.div()</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">\(\rot\v F=\v0\) sur \(D\) permet de conclure que \(\v F\) est conservatif si :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(D\) est un ouvert étoilé</button><button type="button" class="opt">toujours, sans condition</button><button type="button" class="opt">\(D\) est borné</button><button type="button" class="opt">\(\Div\v F=0\) aussi</button></div><p class="qe off"><b class="vd"></b> Le théorème de primitivation exige un ouvert étoilé. <a href="#ChampConservatif">ChampConservatif.primitivationRot</a></p></div>
+    <div class="qq off" data-p="2"><p class="qt">Sur un ouvert étoilé, \(\Div\v F=0\) entraîne :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\v F=\rot\v G\) pour un certain \(\v G\)</button><button type="button" class="opt">\(\v F=\grad f\) pour un certain \(f\)</button><button type="button" class="opt">\(\v F=\v0\)</button><button type="button" class="opt">\(\v F\) constant</button></div><p class="qe off"><b class="vd"></b> C'est le théorème de primitivation, cas de la divergence : champ de rotationnel. <a href="#ChampConservatif">ChampConservatif.primitivationDiv</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">Si \(\v u\) et \(\v v\) sont colinéaires, \(\v u\wedge\v v\) vaut :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\v0\)</button><button type="button" class="opt">\(\|\v u\|\,\|\v v\|\)</button><button type="button" class="opt">\(\v u\)</button><button type="button" class="opt">il n'est pas défini</button></div><p class="qe off"><b class="vd"></b> \(\|\v u\wedge\v v\|=\|\v u\|\|\v v\||\sin(\v u,\v v)|\) et le sinus est nul. <a href="#Vecteur3D">Vecteur3D.produitVectoriel()</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">\(\v v\wedge\v u=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(-\,\v u\wedge\v v\)</button><button type="button" class="opt">\(\v u\wedge\v v\)</button><button type="button" class="opt">\(\v0\)</button><button type="button" class="opt">\(\v u\cdot\v v\)</button></div><p class="qe off"><b class="vd"></b> Le produit vectoriel est antisymétrique : l'ordre change le signe. <a href="#Vecteur3D">Vecteur3D.produitVectoriel()</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">Un paramétrage de l'ellipse \(\dfrac{x^2}{a^2}+\dfrac{y^2}{b^2}=1\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\((a\cos\theta,\ b\sin\theta)\)</button><button type="button" class="opt">\((b\cos\theta,\ a\sin\theta)\)</button><button type="button" class="opt">\((a^2\cos\theta,\ b^2\sin\theta)\)</button><button type="button" class="opt">\(\big(\frac{\cos\theta}a,\ \frac{\sin\theta}b\big)\)</button></div><p class="qe off"><b class="vd"></b> On vérifie : \(\frac{a^2\cos^2\theta}{a^2}+\frac{b^2\sin^2\theta}{b^2}=1\). <a href="#CourbePlane">CourbePlane.Ellipse</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">En coordonnées sphériques, l'angle \(\varphi\) varie dans :</p><div class="qo"><button type="button" class="opt" data-ok="1">\([0,\pi]\)</button><button type="button" class="opt">\([0,2\pi]\)</button><button type="button" class="opt">\([-\frac\pi2,\frac\pi2]\)</button><button type="button" class="opt">\([0,\frac\pi2]\)</button></div><p class="qe off"><b class="vd"></b> \(\varphi\) part de l'axe \((Oz)\) et va jusqu'à \(\pi\). C'est \(\theta\) qui fait le tour complet. <a href="#Coordonnees">Coordonnees.SPHERIQUES</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">Pour le cône \(x^2+y^2\le z^2,\ 0\le z\le a\), en cylindriques :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(0\le r\le z\)</button><button type="button" class="opt">\(0\le r\le\sqrt z\)</button><button type="button" class="opt">\(0\le r\le a\)</button><button type="button" class="opt">\(0\le r\le z^2\)</button></div><p class="qe off"><b class="vd"></b> \(r^2\le z^2\) avec \(r,z\ge0\) donne \(r\le z\). \(\sqrt z\) est la borne du paraboloïde. <a href="#Solide">Solide.Cone</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">Un vecteur normal à la droite \(ax+by+c=0\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\((a,b)\)</button><button type="button" class="opt">\((-b,a)\)</button><button type="button" class="opt">\((b,a)\)</button><button type="button" class="opt">\((a,-b)\)</button></div><p class="qe off"><b class="vd"></b> \((a,b)\) est normal, \((-b,a)\) est directeur. <a href="#CourbePlane">CourbePlane.Droite</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">Combien de paramètres faut-il pour décrire une surface ?</p><div class="qo"><button type="button" class="opt" data-ok="1">2</button><button type="button" class="opt">1</button><button type="button" class="opt">3</button><button type="button" class="opt">cela dépend de la surface</button></div><p class="qe off"><b class="vd"></b> Courbe : 1 paramètre. Surface : 2. Solide : 3. <a href="#Coordonnees">Coordonnees.choisir()</a></p></div>
+    <div class="qq off" data-p="3"><p class="qt">\((1,2,3)\cdot(0,1,-1)=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(-1\)</button><button type="button" class="opt">\(1\)</button><button type="button" class="opt">\(5\)</button><button type="button" class="opt">\((0,2,-3)\)</button></div><p class="qe off"><b class="vd"></b> \(0+2-3=-1\). Un produit scalaire est un nombre. <a href="#Vecteur3D">Vecteur3D.produitScalaire()</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">Le Jacobien du passage en polaires est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(r\)</button><button type="button" class="opt">\(r^2\)</button><button type="button" class="opt">\(1\)</button><button type="button" class="opt">\(r\sin\theta\)</button></div><p class="qe off"><b class="vd"></b> \(\dd x\,\dd y=r\,\dd r\,\dd\theta\). <a href="#ChangementDeVariables">ChangementDeVariables</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">Le Jacobien du passage en sphériques est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(r^2\sin\varphi\)</button><button type="button" class="opt">\(r^2\)</button><button type="button" class="opt">\(r\sin\varphi\)</button><button type="button" class="opt">\(r^2\cos\varphi\)</button></div><p class="qe off"><b class="vd"></b> \(\dd x\,\dd y\,\dd z=r^2\sin\varphi\,\dd r\,\dd\theta\,\dd\varphi\). <a href="#ChangementDeVariables">ChangementDeVariables</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">\(\iint_D\dd x\,\dd y\) représente :</p><div class="qo"><button type="button" class="opt" data-ok="1">l'aire de \(D\)</button><button type="button" class="opt">le volume de \(D\)</button><button type="button" class="opt">le périmètre de \(D\)</button><button type="button" class="opt">toujours 0</button></div><p class="qe off"><b class="vd"></b> Intégrer la fonction constante 1 sur un domaine du plan donne son aire. <a href="#IntegraleDouble">IntegraleDouble.aire</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">Pour \(D=\{0\le x\le1,\ 0\le y\le x\}\), \(\iint_Df=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\int_0^1\Big(\int_0^xf\,\dd y\Big)\dd x\)</button><button type="button" class="opt">\(\int_0^x\Big(\int_0^1f\,\dd x\Big)\dd y\)</button><button type="button" class="opt">\(\int_0^1\Big(\int_0^xf\,\dd x\Big)\dd y\)</button><button type="button" class="opt">\(\int_0^1\Big(\int_0^1f\,\dd y\Big)\dd x\)</button></div><p class="qe off"><b class="vd"></b> La borne variable \(x\) va à l'intérieur, sur l'intégrale en \(y\). Les bornes extérieures sont constantes. <a href="#IntegraleDouble">IntegraleDouble.surDomaineQuelconque()</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">On peut écrire \(\iint_Df=\int g\times\int h\) quand :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(f=g(x)h(y)\) et \(D\) est un rectangle</button><button type="button" class="opt">toujours</button><button type="button" class="opt">\(f=g(x)h(y)\), quel que soit \(D\)</button><button type="button" class="opt">\(D\) est un rectangle, quelle que soit \(f\)</button></div><p class="qe off"><b class="vd"></b> Il faut les deux : une fonction séparable et des bornes toutes constantes. <a href="#IntegraleDouble">IntegraleDouble.surRectangle()</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">Le volume de la boule de rayon \(R\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\frac43\pi R^3\)</button><button type="button" class="opt">\(4\pi R^2\)</button><button type="button" class="opt">\(\pi R^3\)</button><button type="button" class="opt">\(\frac23\pi R^3\)</button></div><p class="qe off"><b class="vd"></b> \(\int_0^Rr^2\,\dd r\int_0^\pi\sin\varphi\,\dd\varphi\int_0^{2\pi}\dd\theta=\frac{R^3}3\cdot2\cdot2\pi\). \(4\pi R^2\) est l'aire de la sphère. <a href="#IntegraleTriple">IntegraleTriple</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">\(\iint_Dxy\,\dd x\,\dd y\) sur le disque unité vaut :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(0\)</button><button type="button" class="opt">\(\frac\pi4\)</button><button type="button" class="opt">\(\frac18\)</button><button type="button" class="opt">\(\pi\)</button></div><p class="qe off"><b class="vd"></b> En polaires, \(\int_0^{2\pi}\cos\theta\sin\theta\,\dd\theta=0\). <a href="#IntegraleDouble">IntegraleDouble</a></p></div>
+    <div class="qq off" data-p="4"><p class="qt">Dans la formule de changement de variables, on multiplie par :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(|\det J_T|\)</button><button type="button" class="opt">\(\det J_T\)</button><button type="button" class="opt">\(\dfrac1{|\det J_T|}\)</button><button type="button" class="opt">\(J_T\)</button></div><p class="qe off"><b class="vd"></b> Le déterminant de la Jacobienne, en valeur absolue. <a href="#ChangementDeVariables">ChangementDeVariables.formule</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">L'intégrale curviligne \(\int_C\v F\cdot\dd\v l\) se calcule par :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\int_a^b\v F(\gamma(t))\cdot\gamma'(t)\,\dd t\)</button><button type="button" class="opt">\(\int_a^b\v F(\gamma(t))\,\dd t\)</button><button type="button" class="opt">\(\int_a^b\v F(t)\cdot\gamma(t)\,\dd t\)</button><button type="button" class="opt">\(\int_a^b\|\v F(\gamma(t))\|\,\dd t\)</button></div><p class="qe off"><b class="vd"></b> On évalue \(\v F\) sur la courbe et on fait le produit scalaire avec la dérivée \(\gamma'(t)\). <a href="#IntegraleCurviligne">IntegraleCurviligne.definition</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">\(\int_{C^-}\v F\cdot\dd\v l=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(-\int_C\v F\cdot\dd\v l\)</button><button type="button" class="opt">\(\int_C\v F\cdot\dd\v l\)</button><button type="button" class="opt">\(0\)</button><button type="button" class="opt">\(\dfrac1{\int_C\v F\cdot\dd\v l}\)</button></div><p class="qe off"><b class="vd"></b> Parcourir la courbe à l'envers change le signe. <a href="#IntegraleCurviligne">IntegraleCurviligne.proprietes</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">Dans Green-Riemann, on intègre sur le domaine :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\pd Qx-\pd Py\)</button><button type="button" class="opt">\(\pd Py-\pd Qx\)</button><button type="button" class="opt">\(\pd Px+\pd Qy\)</button><button type="button" class="opt">\(\pd Qy-\pd Px\)</button></div><p class="qe off"><b class="vd"></b> Le coefficient de \(\dd y\) dérivé en \(x\), moins le coefficient de \(\dd x\) dérivé en \(y\). <a href="#GreenRiemann">GreenRiemann.formule</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">Green-Riemann s'applique à une courbe :</p><div class="qo"><button type="button" class="opt" data-ok="1">fermée, parcourue dans le sens trigonométrique</button><button type="button" class="opt">fermée, parcourue dans le sens horaire</button><button type="button" class="opt">quelconque, ouverte ou fermée</button><button type="button" class="opt">qui est un segment</button></div><p class="qe off"><b class="vd"></b> La courbe doit entourer un domaine. Dans le sens horaire, il faut changer le signe. <a href="#GreenRiemann">GreenRiemann.conditions</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">\(\omega=P\,\dd x+Q\,\dd y\) est fermée si :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\pd Qx=\pd Py\)</button><button type="button" class="opt">\(\pd Px=\pd Qy\)</button><button type="button" class="opt">\(P=Q\)</button><button type="button" class="opt">\(\pd Px+\pd Qy=0\)</button></div><p class="qe off"><b class="vd"></b> Les dérivées croisées sont égales. <a href="#FormeDifferentielle">FormeDifferentielle.fermee</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">Si \(\omega\) est exacte de potentiel \(f\), alors \(\int_{AB}\omega=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(f(B)-f(A)\)</button><button type="button" class="opt">\(f(A)-f(B)\)</button><button type="button" class="opt">\(f(A)+f(B)\)</button><button type="button" class="opt">une valeur qui dépend du chemin</button></div><p class="qe off"><b class="vd"></b> Seuls les deux bouts comptent : arrivée moins départ. <a href="#FormeDifferentielle">FormeDifferentielle.integrale</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">L'intégrale d'une forme exacte le long d'une courbe fermée vaut :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(0\)</button><button type="button" class="opt">\(2\pi\)</button><button type="button" class="opt">l'aire entourée</button><button type="button" class="opt">cela dépend de la courbe</button></div><p class="qe off"><b class="vd"></b> Départ et arrivée coïncident : \(f(A)-f(A)=0\). <a href="#FormeDifferentielle">FormeDifferentielle.integrale</a></p></div>
+    <div class="qq off" data-p="5"><p class="qt">\(\oint_Cx\,\dd y-y\,\dd x\) sur le cercle de rayon \(R\), sens trigonométrique :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(2\pi R^2\)</button><button type="button" class="opt">\(\pi R^2\)</button><button type="button" class="opt">\(0\)</button><button type="button" class="opt">\(2\pi R\)</button></div><p class="qe off"><b class="vd"></b> Green-Riemann : \(\pd Qx-\pd Py=2\), donc deux fois l'aire du disque. <a href="#GreenRiemann">GreenRiemann.appliquer()</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Un vecteur normal à la surface paramétrée par \(\Psi(u,v)\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\v T_u\wedge\v T_v\)</button><button type="button" class="opt">\(\v T_u\cdot\v T_v\)</button><button type="button" class="opt">\(\v T_u+\v T_v\)</button><button type="button" class="opt">\(\v T_u\)</button></div><p class="qe off"><b class="vd"></b> Le produit vectoriel de deux tangents est orthogonal aux deux, donc au plan tangent. <a href="#SurfaceParametree">SurfaceParametree.normal</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Une surface paramétrée est régulière si :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\v T_u\wedge\v T_v\ne\v0\) en tout point</button><button type="button" class="opt">\(\v T_u\cdot\v T_v=0\) en tout point</button><button type="button" class="opt">elle est fermée</button><button type="button" class="opt">\(\v T_u\) et \(\v T_v\) sont unitaires</button></div><p class="qe off"><b class="vd"></b> La régularité garantit l'existence d'une normale partout. <a href="#SurfaceParametree">SurfaceParametree.reguliere</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Pour la sphère paramétrée dans l'ordre \((\theta,\varphi)\), \(\v T_\theta\wedge\v T_\varphi\) pointe :</p><div class="qo"><button type="button" class="opt" data-ok="1">vers l'intérieur</button><button type="button" class="opt">vers l'extérieur</button><button type="button" class="opt">le long de la surface</button><button type="button" class="opt">il est nul partout</button></div><p class="qe off"><b class="vd"></b> Il vaut \(-R\sin\varphi\,\overrightarrow{OM}\) : rentrant. Pour un flux sortant, on change le signe. <a href="#SurfaceParametree">SurfaceParametree</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Le théorème de Stokes s'écrit :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\iint_S\rot\v F\cdot\dd\v S=\oint_C\v F\cdot\dd\v l\)</button><button type="button" class="opt">\(\iint_S\v F\cdot\dd\v S=\oint_C\rot\v F\cdot\dd\v l\)</button><button type="button" class="opt">\(\iint_S\rot\v F\cdot\dd\v S=\iiint_\Omega\Div\v F\)</button><button type="button" class="opt">\(\iint_S\v F\cdot\dd\v S=\oint_C\v F\cdot\dd\v l\)</button></div><p class="qe off"><b class="vd"></b> Flux du rotationnel à travers la surface = circulation du champ sur son bord. <a href="#Stokes">Stokes.formule</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Le théorème de Green-Ostrogradsky s'écrit :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\iint_S\v F\cdot\dd\v S=\iiint_\Omega\Div\v F\)</button><button type="button" class="opt">\(\iint_S\v F\cdot\dd\v S=\iiint_\Omega\rot\v F\)</button><button type="button" class="opt">\(\iint_S\Div\v F\ \dd S=\iiint_\Omega\v F\)</button><button type="button" class="opt">\(\iint_S\v F\cdot\dd\v S=\oint_C\v F\cdot\dd\v l\)</button></div><p class="qe off"><b class="vd"></b> Flux sortant à travers la surface fermée = intégrale triple de la divergence. <a href="#Ostrogradsky">GreenOstrogradsky.formule</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Green-Ostrogradsky s'applique à une surface :</p><div class="qo"><button type="button" class="opt" data-ok="1">fermée, avec la normale sortante</button><button type="button" class="opt">qui a un bord, orientée par le tire-bouchon</button><button type="button" class="opt">fermée, avec la normale rentrante</button><button type="button" class="opt">quelconque</button></div><p class="qe off"><b class="vd"></b> La surface doit enfermer un volume. Avec la normale rentrante, le signe change. <a href="#Ostrogradsky">GreenOstrogradsky.conditions</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Dans le calcul direct d'un flux, à \(\v F(\Psi)\cdot(\v T_u\wedge\v T_v)\) on ajoute :</p><div class="qo"><button type="button" class="opt" data-ok="1">rien : le facteur est déjà dans \(\v T_u\wedge\v T_v\)</button><button type="button" class="opt">le Jacobien \(r\)</button><button type="button" class="opt">le Jacobien \(r^2\sin\varphi\)</button><button type="button" class="opt">la norme \(\|\v T_u\wedge\v T_v\|\)</button></div><p class="qe off"><b class="vd"></b> Le produit vectoriel contient déjà le facteur d'échelle de la surface. <a href="#Flux">Flux.calculDirect()</a></p></div>
+    <div class="qq off" data-p="6"><p class="qt">Le flux sortant de \(\v F=(x,y,z)\) à travers la sphère de rayon \(R\) vaut :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(4\pi R^3\)</button><button type="button" class="opt">\(4\pi R^2\)</button><button type="button" class="opt">\(\frac43\pi R^3\)</button><button type="button" class="opt">\(0\)</button></div><p class="qe off"><b class="vd"></b> \(\Div\v F=3\), donc \(3\times\frac43\pi R^3\). <a href="#Ostrogradsky">GreenOstrogradsky.appliquer()</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">\(\cos^2a=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\dfrac{1+\cos2a}2\)</button><button type="button" class="opt">\(\dfrac{1-\cos2a}2\)</button><button type="button" class="opt">\(1-\cos2a\)</button><button type="button" class="opt">\(\dfrac{1+\cos a}2\)</button></div><p class="qe off"><b class="vd"></b> Avec le signe moins, c'est \(\sin^2a\). <a href="#TrigoLinearisation">Trigo.linearisation</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">\(\sin2a=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(2\sin a\cos a\)</button><button type="button" class="opt">\(2\sin a\)</button><button type="button" class="opt">\(\sin^2a-\cos^2a\)</button><button type="button" class="opt">\(\sin a\cos a\)</button></div><p class="qe off"><b class="vd"></b> Formule de duplication du sinus. <a href="#TrigoIdentites">Trigo.identites</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">\(\cos(a+b)=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\cos a\cos b-\sin a\sin b\)</button><button type="button" class="opt">\(\cos a\cos b+\sin a\sin b\)</button><button type="button" class="opt">\(\sin a\cos b+\cos a\sin b\)</button><button type="button" class="opt">\(\cos a+\cos b\)</button></div><p class="qe off"><b class="vd"></b> Pour le cosinus, le signe s'inverse : \(a+b\) donne un moins. <a href="#TrigoIdentites">Trigo.identites</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">\(\int_0^{2\pi}\cos^2\theta\,\dd\theta=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\pi\)</button><button type="button" class="opt">\(2\pi\)</button><button type="button" class="opt">\(0\)</button><button type="button" class="opt">\(\frac\pi2\)</button></div><p class="qe off"><b class="vd"></b> \(\cos^2\theta=\frac{1+\cos2\theta}2\) : il reste \(\frac12\times2\pi\). <a href="#IntegralesTrigo">IntegralesTrigo</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">\(\int_0^{\pi}\sin\varphi\,\dd\varphi=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(2\)</button><button type="button" class="opt">\(0\)</button><button type="button" class="opt">\(1\)</button><button type="button" class="opt">\(\pi\)</button></div><p class="qe off"><b class="vd"></b> \([-\cos\varphi]_0^\pi=1+1\). <a href="#IntegralesTrigo">IntegralesTrigo</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">\(\cos\big(\frac\pi2-x\big)=\)</p><div class="qo"><button type="button" class="opt" data-ok="1">\(\sin x\)</button><button type="button" class="opt">\(-\sin x\)</button><button type="button" class="opt">\(\cos x\)</button><button type="button" class="opt">\(-\cos x\)</button></div><p class="qe off"><b class="vd"></b> Angles complémentaires : cosinus et sinus s'échangent. <a href="#TrigoSymetries">Trigo.symetries</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">Le DL de \(\cos u\) en 0 à l'ordre 2 est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(1-\dfrac{u^2}2\)</button><button type="button" class="opt">\(1+\dfrac{u^2}2\)</button><button type="button" class="opt">\(u-\dfrac{u^3}6\)</button><button type="button" class="opt">\(1-u^2\)</button></div><p class="qe off"><b class="vd"></b> \(\cos u=1-\frac{u^2}2+\frac{u^4}{24}+\dots\) <a href="#DL">DL</a></p></div>
+    <div class="qq off" data-p="0"><p class="qt">Une primitive de \(\sin(ax)\) est :</p><div class="qo"><button type="button" class="opt" data-ok="1">\(-\dfrac{\cos(ax)}a\)</button><button type="button" class="opt">\(\dfrac{\cos(ax)}a\)</button><button type="button" class="opt">\(-a\cos(ax)\)</button><button type="button" class="opt">\(\dfrac{\sin(ax)}a\)</button></div><p class="qe off"><b class="vd"></b> On divise par \(a\), avec un signe moins. <a href="#Primitives">Primitives</a></p></div>
+    <div class="qend off" id="qend"><p class="qres" id="qres"></p><div id="qmiss"></div><button type="button" class="qbtn" id="qagain">rejouer ce chapitre</button></div>
+    <button type="button" class="qbtn off" id="qnext">question suivante</button>
+  </div>
+</section>
+
+<!-- ============ ENTRAINEMENT ============ -->
+<section class="blk" id="entrainement" style="scroll-margin-top:8rem">
+  <h2 class="sec">Entraînement</h2>
+  <p class="sub">Dix-huit exercices nouveaux, trois par chapitre, du même type que ceux du poly. Cherche d'abord sur papier, puis ouvre la solution : elle nomme la méthode de la fiche à appeler.</p>
+  <div class="grp" data-p="1"><h3 class="gh">ch1.fonctions</h3><div class="links"><div class="lk tr" data-p="1"><div class="ft"><span class="tn">void limiteQuiExiste()</span></div><p class="en">Étudier \(\lim\limits_{(x,y)\to(0,0)}\dfrac{x^2y^2}{x^2+y^2}\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Limite">Limite.parPolaires()</a></p><ol><li>Directions usuelles : \(f(x,0)=0\), \(f(0,y)=0\), \(f(x,x)=\frac{x^2}2\to0\). Rien ne contredit 0, il faut prouver.</li><li>Polaires : \(f=\dfrac{r^4\cos^2\theta\sin^2\theta}{r^2}=r^2\cos^2\theta\sin^2\theta\).</li><li>\(|f|\le r^2\to0\), majoration indépendante de \(\theta\).</li></ol><p class="rs"><b>return</b> La limite existe et vaut \(0\).</p></details></div><div class="lk tr" data-p="1"><div class="ft"><span class="tn">void limiteQuiNExistePas()</span></div><p class="en">Étudier \(\lim\limits_{(x,y)\to(0,0)}\dfrac{xy}{x^2+y^2}\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Limite">Limite.existe()</a></p><ol><li>\(f(x,0)=0\).</li><li>\(f(x,x)=\dfrac{x^2}{2x^2}=\dfrac12\).</li><li>Deux chemins, deux valeurs différentes.</li></ol><p class="rs"><b>return</b> Pas de limite en \((0,0)\).</p></details></div><div class="lk tr" data-p="1"><div class="ft"><span class="tn">void deriveesEtSchwarz()</span></div><p class="en">Pour \(f(x,y)=x^2y+e^{xy}\), calculer \(\pd fx\), \(\pd fy\) et vérifier le théorème de Schwarz.</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#DeriveePartielle">DeriveePartielle.deriver()</a></p><ol><li>\(\pd fx=2xy+ye^{xy}\) et \(\pd fy=x^2+xe^{xy}\).</li><li>\(\pd{}{y}\Big(\pd fx\Big)=2x+e^{xy}+xye^{xy}\).</li><li>\(\pd{}{x}\Big(\pd fy\Big)=2x+e^{xy}+xye^{xy}\).</li></ol><p class="rs"><b>return</b> Les deux dérivées croisées sont égales, comme attendu pour une fonction \(C^2\).</p></details></div></div></div>
+  <div class="grp" data-p="2"><h3 class="gh">ch2.vectorielle</h3><div class="links"><div class="lk tr" data-p="2"><div class="ft"><span class="tn">void operateursSurUnScalaire()</span></div><p class="en">Pour \(f(x,y,z)=x^2+y^2+z^2\), calculer \(\grad f\), \(\Delta f\) et \(\rot(\grad f)\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Nabla">Nabla.grad(), laplacien()</a></p><ol><li>\(\grad f=(2x,2y,2z)\).</li><li>\(\Delta f=2+2+2=6\), et on retrouve \(\Div(\grad f)=6\).</li><li>\(\rot(2x,2y,2z)=(0-0,\ 0-0,\ 0-0)\).</li></ol><p class="rs"><b>return</b> \(\grad f=(2x,2y,2z)\), \(\Delta f=6\), \(\rot(\grad f)=\v0\).</p></details></div><div class="lk tr" data-p="2"><div class="ft"><span class="tn">void champConservatif()</span></div><p class="en">Montrer que \(\v F=(2xy+z,\ x^2,\ x)\) est conservatif sur \(\R^3\) et trouver un potentiel.</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#ChampConservatif">ChampConservatif.trouverPotentiel()</a></p><ol><li>\(\R^3\) est un ouvert étoilé et \(\v F\) est \(C^1\).</li><li>\(\rot\v F=(0-0,\ 1-1,\ 2x-2x)=\v0\) : conservatif.</li><li>\(\pd fx=2xy+z\Rightarrow f=x^2y+xz+g(y,z)\).</li><li>\(\pd fy=x^2+\pd gy=x^2\Rightarrow g=h(z)\). Puis \(\pd fz=x+h\'(z)=x\Rightarrow h\) constante.</li></ol><p class="rs"><b>return</b> \(f(x,y,z)=x^2y+xz\) (à une constante près).</p></details></div><div class="lk tr" data-p="2"><div class="ft"><span class="tn">void divEtRot()</span></div><p class="en">Calculer la divergence et le rotationnel de \(\v F=(yz,\ xz,\ xy)\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Nabla">Nabla.div(), rot()</a></p><ol><li>\(\Div\v F=0+0+0=0\).</li><li>\(\rot\v F=(x-x,\ y-y,\ z-z)=\v0\).</li><li>Vérification : \(\v F=\grad(xyz)\).</li></ol><p class="rs"><b>return</b> \(\Div\v F=0\) et \(\rot\v F=\v0\).</p></details></div></div></div>
+  <div class="grp" data-p="3"><h3 class="gh">ch3.geometrie</h3><div class="links"><div class="lk tr" data-p="3"><div class="ft"><span class="tn">void produitVectoriel()</span></div><p class="en">Pour \(\v u=(1,2,3)\) et \(\v v=(0,1,-1)\), calculer \(\v u\cdot\v v\) et \(\v u\wedge\v v\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Vecteur3D">Vecteur3D.produitVectoriel()</a></p><ol><li>\(\v u\cdot\v v=0+2-3=-1\).</li><li>\(\v u\wedge\v v=(2\cdot(-1)-3\cdot1,\ 3\cdot0-1\cdot(-1),\ 1\cdot1-2\cdot0)=(-5,1,1)\).</li><li>Contrôle : \((-5,1,1)\cdot\v u=-5+2+3=0\) et \((-5,1,1)\cdot\v v=1-1=0\).</li></ol><p class="rs"><b>return</b> \(\v u\cdot\v v=-1\), \(\v u\wedge\v v=(-5,1,1)\).</p></details></div><div class="lk tr" data-p="3"><div class="ft"><span class="tn">void parametrerDesCourbes()</span></div><p class="en">Paramétrer le cercle \((x-1)^2+(y+2)^2=9\), puis l\'intérieur de l\'ellipse \(\dfrac{x^2}4+\dfrac{y^2}9=1\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#CourbePlane">CourbePlane</a></p><ol><li>Cercle : centre \(\Omega=(1,-2)\), rayon \(3\).</li><li>Ellipse : \(a=2\), \(b=3\), et on ajoute \(r\in[0,1]\) pour remplir l\'intérieur.</li></ol><p class="rs"><b>return</b> \(\gamma(\theta)=(1+3\cos\theta,\ -2+3\sin\theta)\), \(\theta\in[0,2\pi]\). &nbsp; \(\psi(r,\theta)=(2r\cos\theta,\ 3r\sin\theta)\), \(r\in[0,1]\), \(\theta\in[0,2\pi]\).</p></details></div><div class="lk tr" data-p="3"><div class="ft"><span class="tn">void parametrerUnSolide()</span></div><p class="en">Paramétrer la demi-boule \(x^2+y^2+z^2\le4,\ z\ge0\), puis sa surface courbe.</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Coordonnees">Coordonnees.choisir()</a></p><ol><li>\(x^2+y^2+z^2\) : sphériques, rayon \(2\).</li><li>\(z=r\cos\varphi\ge0\) impose \(\varphi\in[0,\frac\pi2]\).</li><li>Pour la surface, on fixe \(r=2\).</li></ol><p class="rs"><b>return</b> Solide : \((r\sin\varphi\cos\theta,\ r\sin\varphi\sin\theta,\ r\cos\varphi)\) avec \(r\in[0,2]\), \(\theta\in[0,2\pi]\), \(\varphi\in[0,\frac\pi2]\). Surface : même formule avec \(r=2\).</p></details></div></div></div>
+  <div class="grp" data-p="4"><h3 class="gh">ch4.integrales</h3><div class="links"><div class="lk tr" data-p="4"><div class="ft"><span class="tn">void triangle()</span></div><p class="en">Calculer \(\iint_D(x+y)\,\dd x\,\dd y\) avec \(D=\{0\le x\le1,\ 0\le y\le1-x\}\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#IntegraleDouble">IntegraleDouble.surDomaineQuelconque()</a></p><ol><li>\(\int_0^{1-x}(x+y)\,\dd y=x(1-x)+\dfrac{(1-x)^2}2=\dfrac12-\dfrac{x^2}2\).</li><li>\(\int_0^1\Big(\dfrac12-\dfrac{x^2}2\Big)\dd x=\dfrac12-\dfrac16\).</li></ol><p class="rs"><b>return</b> \(\dfrac13\).</p></details></div><div class="lk tr" data-p="4"><div class="ft"><span class="tn">void disqueEnPolaires()</span></div><p class="en">Calculer \(\iint_De^{-(x^2+y^2)}\,\dd x\,\dd y\) sur le disque de centre \(O\) et de rayon \(R\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#ChangementDeVariables">ChangementDeVariables.appliquer()</a></p><ol><li>Polaires : \(\int_0^{2\pi}\dd\theta\int_0^Re^{-r^2}\,r\,\dd r\).</li><li>\(\int_0^Rre^{-r^2}\,\dd r=\Big[-\dfrac12e^{-r^2}\Big]_0^R=\dfrac{1-e^{-R^2}}2\).</li></ol><p class="rs"><b>return</b> \(\pi\big(1-e^{-R^2}\big)\).</p></details></div><div class="lk tr" data-p="4"><div class="ft"><span class="tn">void volumeDuCone()</span></div><p class="en">Calculer le volume du cône \(x^2+y^2\le z^2,\ 0\le z\le a\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#IntegraleTriple">IntegraleTriple.parChangementDeVariables()</a></p><ol><li>Cylindriques : \(0\le r\le z\), \(\theta\in[0,2\pi]\), \(z\in[0,a]\). La borne de \(r\) dépend de \(z\) : on intègre en \(r\) d\'abord.</li><li>\(\int_0^{2\pi}\dd\theta\int_0^a\Big(\int_0^zr\,\dd r\Big)\dd z=2\pi\int_0^a\dfrac{z^2}2\,\dd z\).</li></ol><p class="rs"><b>return</b> \(\dfrac{\pi a^3}3\).</p></details></div></div></div>
+  <div class="grp" data-p="5"><h3 class="gh">ch5.curvilignes</h3><div class="links"><div class="lk tr" data-p="5"><div class="ft"><span class="tn">void calculDirect()</span></div><p class="en">Calculer \(\oint_Cx\,\dd y-y\,\dd x\) sur le cercle de centre \(O\) et de rayon \(R\), sens trigonométrique.</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#IntegraleCurviligne">IntegraleCurviligne.calculDirect()</a></p><ol><li>\(\gamma(t)=(R\cos t,R\sin t)\), \(\dd x=-R\sin t\,\dd t\), \(\dd y=R\cos t\,\dd t\).</li><li>\(x\,\dd y-y\,\dd x=R^2(\cos^2t+\sin^2t)\,\dd t=R^2\,\dd t\).</li><li>Contrôle par Green-Riemann : \(\pd Qx-\pd Py=2\), donc \(2\times\pi R^2\).</li></ol><p class="rs"><b>return</b> \(2\pi R^2\).</p></details></div><div class="lk tr" data-p="5"><div class="ft"><span class="tn">void formeExacte()</span></div><p class="en">Calculer \(\int_{AB}(2xy+1)\,\dd x+(x^2+2y)\,\dd y\) de \(A(0,0)\) à \(B(1,2)\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#FormeDifferentielle">FormeDifferentielle.integrer()</a></p><ol><li>\(\pd Qx=2x=\pd Py\) : fermée sur \(\R^2\) étoilé, donc exacte.</li><li>\(\pd fx=2xy+1\Rightarrow f=x^2y+x+g(y)\), puis \(\pd fy=x^2+g\'(y)=x^2+2y\Rightarrow g=y^2\).</li><li>\(f=x^2y+x+y^2\), \(f(B)=2+1+4=7\), \(f(A)=0\).</li></ol><p class="rs"><b>return</b> \(7\), quel que soit le chemin de \(A\) à \(B\).</p></details></div><div class="lk tr" data-p="5"><div class="ft"><span class="tn">void greenRiemann()</span></div><p class="en">Calculer \(\oint_Cy^2\,\dd x+3xy\,\dd y\), où \(C\) est le bord du demi-disque \(x^2+y^2\le1,\ y\ge0\), sens trigonométrique.</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#GreenRiemann">GreenRiemann.appliquer()</a></p><ol><li>\(C\) est fermée et bien orientée.</li><li>\(\pd Qx-\pd Py=3y-2y=y\).</li><li>\(\iint_\Delta y\,\dd x\,\dd y=\int_0^\pi\sin\theta\,\dd\theta\int_0^1r^2\,\dd r=2\times\dfrac13\).</li></ol><p class="rs"><b>return</b> \(\dfrac23\).</p></details></div></div></div>
+  <div class="grp" data-p="6"><h3 class="gh">ch6.surfaces</h3><div class="links"><div class="lk tr" data-p="6"><div class="ft"><span class="tn">void fluxDirect()</span></div><p class="en">Calculer le flux sortant de \(\v F=(x,y,0)\) à travers la surface latérale du cylindre \(x^2+y^2=1,\ 0\le z\le2\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Flux">Flux.calculDirect()</a></p><ol><li>\(\Psi(\theta,z)=(\cos\theta,\sin\theta,z)\), \(\v T_\theta\wedge\v T_z=(\cos\theta,\sin\theta,0)\), sortant.</li><li>\(\v F(\Psi)\cdot(\v T_\theta\wedge\v T_z)=\cos^2\theta+\sin^2\theta=1\).</li><li>\(\int_0^2\dd z\int_0^{2\pi}\dd\theta\).</li></ol><p class="rs"><b>return</b> \(4\pi\).</p></details></div><div class="lk tr" data-p="6"><div class="ft"><span class="tn">void ostrogradsky()</span></div><p class="en">Calculer le flux sortant de \(\v F=(x,y,z)\) à travers la sphère de centre \(O\) et de rayon \(R\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Ostrogradsky">GreenOstrogradsky.appliquer()</a></p><ol><li>La sphère est fermée, elle entoure la boule \(\Omega\).</li><li>\(\Div\v F=3\).</li><li>\(\iiint_\Omega3=3\times\dfrac43\pi R^3\).</li></ol><p class="rs"><b>return</b> \(4\pi R^3\).</p></details></div><div class="lk tr" data-p="6"><div class="ft"><span class="tn">void stokes()</span></div><p class="en">Calculer le flux de \(\rot\v F\) à travers la demi-sphère \(x^2+y^2+z^2=1,\ z\ge0\), orientée vers le haut, pour \(\v F=(-y,x,0)\).</p><details><summary>voir la solution</summary><p class="mt">Méthode : <a href="#Stokes">Stokes.appliquer()</a></p><ol><li>Bord : le cercle \(\gamma(t)=(\cos t,\sin t,0)\), sens trigonométrique vu d\'en haut.</li><li>\(\oint\v F\cdot\dd\v l=\int_0^{2\pi}\big(\sin^2t+\cos^2t\big)\dd t\).</li><li>Contrôle : \(\rot\v F=(0,0,2)\), flux à travers le disque \(z=0\) : \(2\times\pi\).</li></ol><p class="rs"><b>return</b> \(2\pi\).</p></details></div></div></div>
+</section>
+
+<!-- ============ CHOIX ============ -->
+<section class="blk" id="choix" style="scroll-margin-top:8rem">
+  <h2 class="sec">quelleMethode(enonce)</h2>
+  <p class="sub">Le <code>switch</code> à faire tourner devant un exercice d'intégrale, avant de calculer.</p>
+  <div class="tw"><table>
+    <tr><th>case</th><th>Ce que dit l'énoncé</th><th>Méthode à appeler</th><th>On retombe sur</th></tr>
+    <tr data-p="4" class="g1"><td><code>∬ ou ∭</code></td><td>Domaine rond : disque, cylindre, cône, boule</td><td><a data-p="4" href="#ChangementDeVariables">ChangementDeVariables.appliquer()</a></td><td>intégrales simples séparées</td></tr>
+    <tr data-p="4"><td><code>∬ ou ∭</code></td><td>Domaine donné par des inégalités en \(x,y,z\)</td><td><a data-p="4" href="#IntegraleDouble">surDomaineQuelconque()</a></td><td>intégrales emboîtées</td></tr>
+    <tr data-p="5" class="g1"><td><code>∫ C</code></td><td>\(\omega\) fermée sur un ouvert étoilé</td><td><a data-p="5" href="#FormeDifferentielle">FormeDifferentielle.integrer()</a></td><td>\(f(B)-f(A)\)</td></tr>
+    <tr data-p="5"><td><code>∮ C</code></td><td>Courbe plane fermée, \(\pd Qx-\pd Py\) simple</td><td><a data-p="5" href="#GreenRiemann">GreenRiemann.appliquer()</a></td><td>intégrale double</td></tr>
+    <tr data-p="5"><td><code>∫ C</code></td><td>Aucun des deux cas précédents</td><td><a data-p="5" href="#IntegraleCurviligne">calculDirect()</a> avec \(\gamma(t)\)</td><td>intégrale simple en \(t\)</td></tr>
+    <tr data-p="6" class="g1"><td><code>∬ S</code></td><td>Surface fermée, flux sortant</td><td><a data-p="6" href="#Ostrogradsky">GreenOstrogradsky.appliquer()</a></td><td>intégrale triple de \(\Div\v F\)</td></tr>
+    <tr data-p="6"><td><code>∬ S</code></td><td>Flux d'un rotationnel, ou circulation sur le bord d'une surface</td><td><a data-p="6" href="#Stokes">Stokes.appliquer()</a></td><td>l'autre côté de l'égalité</td></tr>
+    <tr data-p="6"><td><code>∬ S</code></td><td>Surface ouverte, champ quelconque</td><td><a data-p="6" href="#Flux">Flux.calculDirect()</a> avec \(\Psi(u,v)\)</td><td>intégrale double en \(u,v\)</td></tr>
+  </table></div>
+</section>
+
+<footer class="end">Source : poly « Cours de Mathématiques, Analyse 3 », ECE Lyon ING2, chapitres 1 à 6 (pages 6 à 61). Le chapitre 7 (optimisation) n'est pas traité ici. Le formulaire, les exceptions, le quiz et les exercices d'entraînement ne viennent pas du poly : je les ai rédigés. Les résultats des exemples que le poly laisse en exercice ont été calculés à part : à recouper avec la correction du cours.</footer>
+
+</div>
+
+<script>
+(function(){
+  function norm(t){ return (t||'').toLowerCase().normalize('NFD').replace(/\p{M}/gu,''); }
+  var $=function(id){ return document.getElementById(id); };
+
+  // ---------- recherche ----------
+  var items=Array.prototype.slice.call(document.querySelectorAll('.cls, .lk'));
+  var index=items.map(function(el){ return norm(el.textContent); });   // lu avant le rendu des formules : contient le TeX
+  var input=$('search'), cnt=$('searchCount'), nores=$('noResult');
+  var extras=Array.prototype.slice.call(document.querySelectorAll('.top, #liens, #choix, #quiz'));
+  function filter(){
+    var terms=norm(input.value).split(/\s+/).filter(Boolean), n=0;
+    items.forEach(function(el,i){
+      var ok=terms.every(function(t){ return index[i].indexOf(t)>=0; });
+      el.hidden=!ok; if(ok) n++;
+    });
+    document.querySelectorAll('.grp').forEach(function(g){ g.hidden=!g.querySelector('.lk:not([hidden])'); });
+    document.querySelectorAll('.pkg').forEach(function(g){ g.hidden=!g.querySelector('.cls:not([hidden])'); });
+    document.querySelectorAll('section.blk').forEach(function(b){
+      if(b.querySelector('.grp')) b.hidden=!b.querySelector('.grp:not([hidden])');
+    });
+    extras.forEach(function(e){ e.hidden=terms.length>0; });
+    cnt.textContent=terms.length ? (n+' résultat'+(n>1?'s':'')) : '';
+    nores.hidden=!(terms.length && n===0);
+  }
+  input.addEventListener('input',filter);
+
+  // ---------- quiz par chapitre ----------
+  var secIds=['pkg1','pkg2','pkg3','pkg4','pkg5','pkg6','formulaire'];
+  var labels={pkg1:'ch1',pkg2:'ch2',pkg3:'ch3',pkg4:'ch4',pkg5:'ch5',pkg6:'ch6',formulaire:'util'};
+  var secs=secIds.map(function(id){ return $(id); });
+  var qs=[], bySec={};
+  secs.forEach(function(sec){
+    bySec[sec.id]=Array.prototype.slice.call(sec.querySelectorAll('.cls dl dd, td.q'));
+    bySec[sec.id].forEach(function(el){ el.classList.add('q'); el.dataset.qi=qs.length; qs.push(el); });
+  });
+  var res={};
+  try{ res=JSON.parse(localStorage.getItem('a3quiz')||'{}')||{}; }catch(e){ res={}; }
+  function save(){ try{ localStorage.setItem('a3quiz',JSON.stringify(res)); }catch(e){} }
+  function mark(){ qs.forEach(function(el){ var r=res[el.dataset.qi]; if(r) el.dataset.r=r; else delete el.dataset.r; }); }
+  var btn=$('quizBtn'), scope=$('quizScope'), reset=$('quizReset'), score=$('score'), on=false;
+  function inScope(id){ return scope.value==='all' || scope.value===id; }
+  function hide(el){ el.classList.remove('shown'); var r=el.querySelector('.rate'); if(r) r.remove(); }
+  function show(el){
+    el.classList.add('shown');
+    if(!el.querySelector('.rate')){
+      var d=document.createElement('div'); d.className='rate';
+      d.innerHTML='<button type="button" data-v="ok">je savais</button><button type="button" data-v="ko">à revoir</button>';
+      el.appendChild(d);
+    }
+  }
+  function renderScore(){
+    score.innerHTML=secIds.map(function(id){
+      var l=bySec[id], ok=0, ko=0;
+      l.forEach(function(el){ var r=res[el.dataset.qi]; if(r==='ok') ok++; else if(r==='ko') ko++; });
+      var p=id==='formulaire'?0:id.slice(3);
+      return '<span class="sc" data-p="'+p+'"><b>'+labels[id]+'</b> <span class="o">'+ok+'</span>/'+l.length+' su'+(ko?' · <span class="k">'+ko+' à revoir</span>':'')+'</span>';
+    }).join('');
+  }
+  function apply(){
+    secs.forEach(function(sec){
+      var a=on && inScope(sec.id);
+      sec.classList.toggle('quizon',a);
+      bySec[sec.id].forEach(function(el){ hide(el); if(a) el.tabIndex=0; else el.removeAttribute('tabindex'); });
+    });
+    btn.setAttribute('aria-pressed',on?'true':'false');
+    btn.textContent=on?'tout réafficher':'masquer les réponses';
+    reset.hidden=!on; score.hidden=!on;
+    mark(); renderScore();
+  }
+  btn.addEventListener('click',function(){ on=!on; apply(); });
+  scope.addEventListener('change',function(){
+    apply();
+    if(on && scope.value!=='all'){ var t=$(scope.value); if(t) t.scrollIntoView(); }
+  });
+  reset.addEventListener('click',function(){ res={}; save(); apply(); });
+  document.addEventListener('click',function(e){
+    if(!on || !e.target.closest) return;
+    var b=e.target.closest('.rate button');
+    if(b){ var q=b.closest('.q'); res[q.dataset.qi]=b.dataset.v; save(); mark(); renderScore(); hide(q); return; }
+    var el=e.target.closest('.quizon .q');
+    if(el && !e.target.closest('a')){ if(el.classList.contains('shown')) hide(el); else show(el); }
+  });
+  document.addEventListener('keydown',function(e){
+    if(!on) return;
+    var t=e.target;
+    if((e.key==='Enter'||e.key===' ') && t.classList && t.classList.contains('q')){ e.preventDefault(); if(t.classList.contains('shown')) hide(t); else show(t); }
+  });
+  mark();
+})();
+</script>
+
+<script>
+// ---------- quiz QCM ----------
+(function(){
+  var $=function(id){ return document.getElementById(id); };
+  var stage=$('qstage'), all=Array.prototype.slice.call(stage.querySelectorAll('.qq'));
+  var tabs=Array.prototype.slice.call(document.querySelectorAll('.qtab'));
+  var hint=$('qhint'), head=$('qhead'), prog=$('qprog'), sc=$('qscore'), next=$('qnext'), end=$('qend'), res=$('qres'), miss=$('qmiss'), again=$('qagain');
+  var best={}; try{ best=JSON.parse(localStorage.getItem('a3qcm')||'{}')||{}; }catch(e){ best={}; }
+  var list=[], i=0, score=0, missed=[], cur=null;
+  function shuffle(a){ for(var k=a.length-1;k>0;k--){ var j=Math.floor(Math.random()*(k+1)); var t=a[k]; a[k]=a[j]; a[j]=t; } return a; }
+  function off(el,v){ el.classList.toggle('off',v); }
+  function ratio(t){ var p=String(t).split('/'); return parseInt(p[0],10)/parseInt(p[1],10); }
+  function showBest(){ tabs.forEach(function(t){ var b=best[t.dataset.s]; t.querySelector('.best').textContent = b ? 'meilleur score : '+b : 'pas encore joué'; }); }
+  function start(s){
+    cur=s; i=0; score=0; missed=[];
+    list=shuffle(all.filter(function(q){ return s==='all' || q.dataset.p===s; }));
+    if(s==='all') list=list.slice(0,20);
+    tabs.forEach(function(t){ t.setAttribute('aria-pressed', t.dataset.s===s ? 'true':'false'); });
+    all.forEach(function(q){
+      off(q,true);
+      var box=q.querySelector('.qo');
+      shuffle(Array.prototype.slice.call(box.children)).forEach(function(b){ b.disabled=false; b.classList.remove('good','bad'); box.appendChild(b); });
+      q.querySelector('.qe').className='qe off';
+    });
+    off(hint,true); off(end,true); off(head,false); show();
+  }
+  function show(){
+    all.forEach(function(q){ off(q,true); });
+    off(list[i],false); off(next,true);
+    prog.textContent='question '+(i+1)+' / '+list.length; sc.textContent='score : '+score;
+  }
+  stage.addEventListener('click',function(e){
+    var b=e.target.closest && e.target.closest('.opt'); if(!b || b.disabled) return;
+    var q=b.closest('.qq'), ok=b.dataset.ok==='1';
+    Array.prototype.forEach.call(q.querySelectorAll('.opt'),function(o){ o.disabled=true; if(o.dataset.ok==='1') o.classList.add('good'); });
+    if(!ok){ b.classList.add('bad'); missed.push(q); } else score++;
+    var ex=q.querySelector('.qe'); ex.className='qe '+(ok?'ok':'ko'); ex.querySelector('.vd').textContent=ok?'Juste.':'Faux.';
+    sc.textContent='score : '+score;
+    next.textContent = i===list.length-1 ? 'voir le score' : 'question suivante';
+    off(next,false); next.focus();
+  });
+  next.addEventListener('click',function(){
+    if(i<list.length-1){ i++; show(); return; }
+    all.forEach(function(q){ off(q,true); }); off(next,true); off(head,true);
+    var txt=score+'/'+list.length; res.textContent='Score : '+score+' / '+list.length;
+    if(!best[cur] || score/list.length >= ratio(best[cur])){ best[cur]=txt; try{ localStorage.setItem('a3qcm',JSON.stringify(best)); }catch(e){} }
+    miss.innerHTML='';
+    var p=document.createElement('p'); miss.appendChild(p);
+    if(missed.length){
+      p.textContent='À revoir :';
+      var seen={};
+      missed.forEach(function(q){ var a=q.querySelector('.qe a'); if(seen[a.textContent]) return; seen[a.textContent]=1; var c=document.createElement('a'); c.href=a.getAttribute('href'); c.textContent=a.textContent; miss.appendChild(c); });
+    } else { p.textContent='Sans faute.'; }
+    again.textContent = cur==='all' ? 'rejouer 20 questions' : 'rejouer ce chapitre';
+    off(end,false); showBest();
+  });
+  again.addEventListener('click',function(){ start(cur); });
+  tabs.forEach(function(t){ t.addEventListener('click',function(){ start(t.dataset.s); }); });
+  showBest();
+})();
+</script>
+
+</body>
+</html>
